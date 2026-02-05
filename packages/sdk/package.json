@@ -1,0 +1,37 @@
+{
+  "name": "@littlepartytime/sdk",
+  "version": "1.0.0",
+  "description": "Game SDK for Little Party Time platform - type definitions and testing utilities",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "require": "./dist/testing/index.js",
+      "import": "./dist/testing/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "files": ["dist"],
+  "keywords": ["boardgame", "sdk", "game-engine", "littlepartytime"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chesterli710/littlepartytime-sdk.git",
+    "directory": "packages/sdk"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vitest": "^3"
+  }
+}
