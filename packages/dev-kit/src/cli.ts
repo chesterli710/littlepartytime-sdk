@@ -10,15 +10,16 @@ async function main() {
       break;
     }
     case 'dev': {
-      console.log('lpt-dev-kit dev server is not yet implemented (Phase 2)');
-      process.exit(1);
+      const { devCommand } = await import('./commands/dev');
+      await devCommand(process.cwd());
+      break;
     }
     default:
       console.log('Usage: lpt-dev-kit <command>');
       console.log('');
       console.log('Commands:');
+      console.log('  dev     Start development server');
       console.log('  pack    Build and package game as .zip');
-      console.log('  dev     Start development server (coming soon)');
       process.exit(command ? 1 : 0);
   }
 }
