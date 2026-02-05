@@ -1,0 +1,20 @@
+import { describe, it, expect } from "vitest";
+import { GameTester, createMockPlayers } from "@littlepartytime/sdk/testing";
+import engine from "../src/engine";
+
+describe("Game Engine", () => {
+  it("should initialize with correct phase", () => {
+    const tester = new GameTester(engine);
+    tester.init(createMockPlayers({{minPlayers}}));
+
+    expect(tester.phase).toBe("playing");
+    expect(tester.playerStates).toHaveLength({{minPlayers}});
+  });
+
+  it("should not be game over on init", () => {
+    const tester = new GameTester(engine);
+    tester.init(createMockPlayers({{minPlayers}}));
+
+    expect(tester.isGameOver()).toBe(false);
+  });
+});

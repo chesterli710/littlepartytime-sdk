@@ -1,0 +1,29 @@
+{
+  "name": "{{gameId}}",
+  "private": true,
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "dev": "lpt-dev-kit dev",
+    "build": "vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "pack": "vite build && lpt-dev-kit pack"
+  },
+  "dependencies": {
+    "@littlepartytime/sdk": "^1.0.0"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "@littlepartytime/dev-kit": "^1.0.0",
+    "@types/react": "^19",
+    "@vitejs/plugin-react": "^5",
+    "react": "^19",
+    "typescript": "^5",
+    "vite": "^7",
+    "vitest": "^3"
+  }
+}

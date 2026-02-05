@@ -1,0 +1,25 @@
+{
+  "name": "create-littlepartytime-game",
+  "version": "1.0.0",
+  "description": "Scaffold a new game project for Little Party Time platform",
+  "bin": {
+    "create-littlepartytime-game": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc && npm run copy-templates",
+    "copy-templates": "cp -r templates dist/",
+    "dev": "tsc --watch"
+  },
+  "files": ["dist"],
+  "keywords": ["boardgame", "create", "scaffold", "littlepartytime"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chesterli710/littlepartytime-sdk.git",
+    "directory": "packages/create-game"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "^5"
+  }
+}

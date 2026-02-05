@@ -1,0 +1,48 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import type { GameRendererProps, GameAction } from "@littlepartytime/sdk";
+
+export default function GameRenderer({ platform, state: initialState }: GameRendererProps) {
+  const me = platform.getLocalPlayer();
+  const players = platform.getPlayers();
+  const [gameState, setGameState] = useState(initialState);
+
+  useEffect(() => {
+    if (initialState && initialState.phase !== "loading") {
+      setGameState(initialState);
+    }
+  }, [initialState]);
+
+  useEffect(() => {
+    const handler = (...args: unknown[]) => {
+      setGameState(args[0] as typeof initialState);
+    };
+    platform.on("stateUpdate", handler);
+    return () => platform.off("stateUpdate", handler);
+  }, [platform]);
+
+  const sendAction = useCallback(
+    (action: GameAction) => platform.send(action),
+    [platform]
+  );
+
+  const isEnded = gameState?.phase === "ended";
+
+  if (isEnded) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <p className="text-2xl font-display text-accent">Game Over</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-6 pt-8 px-4">
+      <p className="text-lg text-text-primary">TODO: Build your game UI</p>
+      <p className="text-sm text-text-secondary">
+        Current player: {me.nickname}
+      </p>
+    </div>
+  );
+}

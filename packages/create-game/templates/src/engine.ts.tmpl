@@ -1,0 +1,41 @@
+import type { GameEngine, GameState, Player, GameAction, GameResult } from "@littlepartytime/sdk";
+
+const engine: GameEngine = {
+  init(players: Player[]): GameState {
+    return {
+      phase: "playing",
+      players: players.map((p) => ({ id: p.id })),
+      data: {
+        currentPlayerIndex: 0,
+        // TODO: Initialize your game data
+      },
+    };
+  },
+
+  handleAction(state: GameState, playerId: string, action: GameAction): GameState {
+    // TODO: Implement your game logic
+    return state;
+  },
+
+  isGameOver(state: GameState): boolean {
+    return state.phase === "ended";
+  },
+
+  getResult(state: GameState): GameResult {
+    return {
+      rankings: state.players.map((p, i) => ({
+        playerId: p.id,
+        rank: i + 1,
+        score: 0,
+        isWinner: i === 0,
+      })),
+    };
+  },
+
+  getPlayerView(state: GameState, _playerId: string): Partial<GameState> {
+    // TODO: Filter hidden information
+    return state;
+  },
+};
+
+export default engine;
