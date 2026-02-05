@@ -1,0 +1,33 @@
+{
+  "name": "@littlepartytime/dev-kit",
+  "version": "1.0.0",
+  "description": "Development toolkit CLI for Little Party Time game developers",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "lpt-dev-kit": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "files": ["dist"],
+  "keywords": ["boardgame", "dev-tools", "littlepartytime"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chesterli710/littlepartytime-sdk.git",
+    "directory": "packages/dev-kit"
+  },
+  "dependencies": {
+    "archiver": "^7"
+  },
+  "devDependencies": {
+    "@types/archiver": "^6",
+    "@types/node": "^22",
+    "typescript": "^5",
+    "vitest": "^3"
+  }
+}
