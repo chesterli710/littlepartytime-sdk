@@ -22,11 +22,21 @@
     "directory": "packages/dev-kit"
   },
   "dependencies": {
-    "archiver": "^7"
+    "@vitejs/plugin-react": "^5",
+    "archiver": "^7",
+    "chokidar": "^4",
+    "express": "^5",
+    "react": "^19",
+    "react-dom": "^19",
+    "socket.io": "^4",
+    "vite": "^7"
   },
   "devDependencies": {
     "@types/archiver": "^6",
+    "@types/express": "^5",
     "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
     "typescript": "^5",
     "vitest": "^3"
   }
