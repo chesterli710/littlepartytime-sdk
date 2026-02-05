@@ -1,0 +1,16 @@
+{
+  "name": "littlepartytime-sdk-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "examples/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "clean": "rm -rf packages/*/dist examples/*/dist"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
