@@ -179,9 +179,9 @@ export default function Preview() {
           <input
             type="number"
             min={2}
-            max={8}
+            max={32}
             value={playerCount}
-            onChange={(e) => setPlayerCount(Math.max(2, Math.min(8, Number(e.target.value))))}
+            onChange={(e) => setPlayerCount(Math.max(2, Math.min(32, Number(e.target.value))))}
             className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-sm"
           />
         </div>

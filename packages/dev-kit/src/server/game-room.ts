@@ -54,6 +54,13 @@ export function removePlayer(room: GameRoom, socketId: string): Player | null {
   return removed;
 }
 
+export function reconnectPlayer(room: GameRoom, socketId: string, nickname: string): Player | null {
+  const existing = room.players.find(p => p.nickname === nickname);
+  if (!existing) return null;
+  existing.socketId = socketId;
+  return existing;
+}
+
 export function getPlayerBySocketId(room: GameRoom, socketId: string): Player | undefined {
   return room.players.find(p => p.socketId === socketId);
 }

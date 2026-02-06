@@ -38,8 +38,15 @@ export function createSocketServer(options: SocketServerOptions): {
 
   io.on('connection', (socket) => {
     const nickname = (socket.handshake.query.nickname as string) || `Player ${room.players.length + 1}`;
-    const player = GameRoom.addPlayer(room, socket.id, nickname);
-    log(`${player.nickname} joined (${player.id})`);
+
+    // Try reconnecting an existing player by nickname
+    let player = GameRoom.reconnectPlayer(room, socket.id, nickname);
+    if (player) {
+      log(`${player.nickname} reconnected (${player.id})`);
+    } else {
+      player = GameRoom.addPlayer(room, socket.id, nickname);
+      log(`${player.nickname} joined (${player.id})`);
+    }
 
     // Notify all
     io.emit('room:update', {
@@ -133,6 +140,18 @@ export function createSocketServer(options: SocketServerOptions): {
 
     // Disconnect
     socket.on('disconnect', () => {
+      // Player already reconnected with a new socket — skip
+      if (player.socketId !== socket.id) {
+        log(`${player.nickname} old connection closed`);
+        return;
+      }
+
+      // During active game, keep player slot for reconnection
+      if (room.phase === 'playing' || room.phase === 'ended') {
+        log(`${player.nickname} disconnected (keeping slot for reconnect)`);
+        return;
+      }
+
       const removed = GameRoom.removePlayer(room, socket.id);
       if (removed) {
         log(`${removed.nickname} left`);
