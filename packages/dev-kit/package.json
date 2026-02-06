@@ -1,6 +1,6 @@
 {
   "name": "@littlepartytime/dev-kit",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Development toolkit CLI for Little Party Time game developers",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,7 +18,7 @@
     "lpt-dev-kit": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsc && cp -r src/webapp dist/",
+    "build": "rm -rf dist && tsc && cp -r src/webapp dist/",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest"
