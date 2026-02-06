@@ -80,12 +80,14 @@ export function startGame(room: GameRoom, engine: GameEngine): void {
 }
 
 export function handleAction(room: GameRoom, engine: GameEngine, playerId: string, action: any): void {
-  if (room.phase !== 'playing' || !room.state) return;
+  if ((room.phase !== 'playing' && room.phase !== 'ended') || !room.state) return;
 
   room.state = engine.handleAction(room.state, playerId, action);
 
   if (engine.isGameOver(room.state)) {
     room.phase = 'ended';
+  } else {
+    room.phase = 'playing';
   }
 }
 

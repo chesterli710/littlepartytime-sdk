@@ -48,6 +48,12 @@ export function createSocketServer(options: SocketServerOptions): {
     });
     onStateChange?.(room);
 
+    // Send current game state to reconnecting player
+    if ((room.phase === 'playing' || room.phase === 'ended') && room.state) {
+      const view = engine.getPlayerView(room.state, player.id);
+      socket.emit('game:state', view);
+    }
+
     // Ready toggle
     socket.on('player:ready', (ready: boolean) => {
       GameRoom.setPlayerReady(room, socket.id, ready);
@@ -85,7 +91,7 @@ export function createSocketServer(options: SocketServerOptions): {
 
     // Game action
     socket.on('game:action', (action: any) => {
-      if (room.phase !== 'playing') return;
+      if (room.phase !== 'playing' && room.phase !== 'ended') return;
 
       log(`${player.nickname} action: ${JSON.stringify(action)}`);
       GameRoom.handleAction(room, engine, player.id, action);

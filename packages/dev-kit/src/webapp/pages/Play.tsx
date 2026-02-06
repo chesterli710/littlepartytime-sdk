@@ -123,7 +123,7 @@ export default function Play() {
         <div className="p-4 text-zinc-500">Loading game...</div>
       )}
       {room.phase === 'ended' && isHost && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999]">
           <button
             onClick={() => socket?.emit('game:playAgain')}
             className="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2 rounded-full font-semibold"
