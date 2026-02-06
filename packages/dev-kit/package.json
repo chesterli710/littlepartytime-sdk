@@ -1,6 +1,6 @@
 {
   "name": "@littlepartytime/dev-kit",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Development toolkit CLI for Little Party Time game developers",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -47,6 +47,7 @@
     "react": "^19",
     "react-dom": "^19",
     "socket.io": "^4",
+    "socket.io-client": "^4",
     "vite": "^7"
   },
   "devDependencies": {
