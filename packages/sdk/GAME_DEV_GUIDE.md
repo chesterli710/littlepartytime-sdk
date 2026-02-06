@@ -28,7 +28,8 @@ my-game/
 │   ├── types.ts           # Game-specific types (actions, state shape)
 │   └── index.ts           # Re-exports config, engine, renderer
 ├── tests/
-│   └── engine.test.ts     # Engine unit tests
+│   ├── engine.test.ts     # Engine unit tests
+│   └── e2e.e2e.test.ts    # Playwright E2E tests (optional)
 └── dist/                  # Build output (generated)
     ├── bundle.js          # Client-side bundle
     ├── engine.cjs         # Server-side engine
@@ -380,6 +381,163 @@ describe('My Game E2E', () => {
     expect(view0).not.toEqual(view1);
   });
 });
+```
+
+## Local Development Server
+
+The dev-kit provides a local development server for previewing and testing your game without uploading to the platform.
+
+### Starting the Dev Server
+
+```bash
+# From your game project directory
+npm run dev
+# or directly:
+npx lpt-dev-kit dev
+```
+
+This starts two servers and provides three pages:
+
+```
+Preview:      http://localhost:4000/preview    # Single-player preview with engine
+Multiplayer:  http://localhost:4000/play       # Multi-player via Socket.IO
+Debug Panel:  http://localhost:4000/debug      # Real-time state inspection
+```
+
+### Preview Page (Single-Player)
+
+The Preview page runs your **engine locally in the browser** — no network needed.
+
+Features:
+- **Engine integration**: `platform.send()` calls `engine.handleAction()` locally, computes `getPlayerView()`, and triggers `stateUpdate` events automatically
+- **Player switching**: Switch between players (2-8) via a dropdown to see each player's filtered view
+- **State editor**: View and override the full game state as JSON for debugging
+- **Action log**: See all actions sent by players in real-time
+- **Game over detection**: Automatically detects when `isGameOver()` returns true and displays results
+- **Reset**: Re-initialize the game at any time
+
+This enables a rapid development cycle: **edit code -> refresh browser -> test immediately**.
+
+### Multiplayer Page
+
+The Play page runs your game with real Socket.IO multiplayer:
+1. Open multiple browser tabs/windows to `http://localhost:4000/play`
+2. Each tab enters a different nickname and joins the lobby
+3. All players click "Ready", then the host starts the game
+4. Actions flow through Socket.IO to the engine running on the dev server
+
+### Debug Page
+
+The Debug page shows the raw room state and full (unfiltered) game state in real-time. Useful for inspecting hidden information during development.
+
+## Playwright E2E Testing
+
+For automated UI testing, the dev-kit provides a `GamePreview` class that orchestrates the dev server and Playwright browser.
+
+### Setup
+
+```bash
+# Install playwright as a dev dependency
+npm install -D playwright
+```
+
+### Writing E2E Tests
+
+Create a test file (e.g., `tests/e2e.e2e.test.ts`):
+
+```typescript
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { GamePreview } from '@littlepartytime/dev-kit/testing';
+import path from 'path';
+
+describe('My Game E2E', () => {
+  let preview: GamePreview;
+
+  beforeAll(async () => {
+    preview = new GamePreview({
+      projectDir: path.resolve(__dirname, '..'),
+      playerCount: 3,
+      headless: true,
+      port: 4100,        // Use non-default ports to avoid conflicts
+      socketPort: 4101,
+    });
+    await preview.start();
+  }, 30000); // Allow time for server startup and browser launch
+
+  afterAll(async () => {
+    await preview.stop();
+  }, 10000);
+
+  it('should show lobby with all players', async () => {
+    const page = preview.getPlayerPage(0);
+    await expect(page.locator('text=Alice')).toBeVisible();
+    await expect(page.locator('text=Bob')).toBeVisible();
+    await expect(page.locator('text=Carol')).toBeVisible();
+  });
+
+  it('should play through a complete game', async () => {
+    // All players click "Ready"
+    await preview.readyAll();
+
+    // Host starts the game
+    await preview.startGame();
+
+    // Interact with the game UI via Playwright
+    const hostPage = preview.getPlayerPage(0);
+    const player2Page = preview.getPlayerPage(1);
+
+    // Use standard Playwright assertions
+    await expect(hostPage.locator('.game-board')).toBeVisible({ timeout: 5000 });
+
+    // Send actions by interacting with the UI
+    await hostPage.click('button:has-text("Play")');
+
+    // Assert state changes on other players' screens
+    await expect(player2Page.locator('text=waiting')).toBeVisible();
+  });
+});
+```
+
+### GamePreview API
+
+```typescript
+import { GamePreview } from '@littlepartytime/dev-kit/testing';
+
+const preview = new GamePreview({
+  projectDir: string;             // Absolute path to game project
+  playerCount: number;            // Number of players (2-8)
+  port?: number;                  // Vite server port (default: 4100)
+  socketPort?: number;            // Socket.IO port (default: 4101)
+  headless?: boolean;             // Headless browser (default: true)
+  browserType?: 'chromium' | 'firefox' | 'webkit';  // default: 'chromium'
+});
+
+await preview.start();                    // Start server + browser, join all players
+const page = preview.getPlayerPage(0);    // Get Playwright Page for player (0 = host)
+const pages = preview.getPlayerPages();   // Get all Page objects
+await preview.readyAll();                 // Click "Ready" for all players
+await preview.startGame();                // Host clicks "Start Game"
+await preview.stop();                     // Clean up browser + server
+```
+
+### Excluding E2E Tests from Unit Test Runs
+
+E2E tests are slower and require playwright. Exclude them from the default `vitest run`:
+
+```typescript
+// vitest.config.ts
+export default defineConfig({
+  test: {
+    include: ["tests/**/*.test.ts"],
+    exclude: ["tests/**/*.e2e.test.ts"],
+  },
+});
+```
+
+Run E2E tests separately:
+
+```bash
+npx vitest run tests/e2e.e2e.test.ts
 ```
 
 ## Building and Packaging

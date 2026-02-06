@@ -7,19 +7,28 @@ import chokidar from 'chokidar';
 export interface DevOptions {
   port?: number;
   socketPort?: number;
+  silent?: boolean;
 }
 
-export async function devCommand(projectDir: string, options: DevOptions = {}): Promise<void> {
+export interface DevServerHandle {
+  stop(): Promise<void>;
+  port: number;
+  socketPort: number;
+}
+
+export async function devCommand(projectDir: string, options: DevOptions = {}): Promise<DevServerHandle> {
   const port = options.port || 4000;
   const socketPort = options.socketPort || 4001;
 
-  console.log('');
-  console.log('  Little Party Time Dev Kit');
-  console.log('  =========================');
-  console.log('');
+  if (!options.silent) {
+    console.log('');
+    console.log('  Little Party Time Dev Kit');
+    console.log('  =========================');
+    console.log('');
+  }
 
   // Start Socket.IO server
-  const { reloadEngine } = createSocketServer({
+  const { server, io, reloadEngine } = createSocketServer({
     port: socketPort,
     projectDir,
   });
@@ -28,7 +37,9 @@ export async function devCommand(projectDir: string, options: DevOptions = {}): 
   const enginePath = path.join(projectDir, 'dist', 'engine.cjs');
   const watcher = chokidar.watch(enginePath, { ignoreInitial: true });
   watcher.on('change', () => {
-    console.log('[Dev] Engine changed, reloading...');
+    if (!options.silent) {
+      console.log('[Dev] Engine changed, reloading...');
+    }
     reloadEngine();
   });
 
@@ -56,11 +67,25 @@ export async function devCommand(projectDir: string, options: DevOptions = {}): 
 
   await vite.listen();
 
-  console.log(`  Preview:      http://localhost:${port}/preview`);
-  console.log(`  Multiplayer:  http://localhost:${port}/play`);
-  console.log(`  Debug Panel:  http://localhost:${port}/debug`);
-  console.log(`  Socket.IO:    ws://localhost:${socketPort}`);
-  console.log('');
-  console.log('  Press Ctrl+C to stop');
-  console.log('');
+  if (!options.silent) {
+    console.log(`  Preview:      http://localhost:${port}/preview`);
+    console.log(`  Multiplayer:  http://localhost:${port}/play`);
+    console.log(`  Debug Panel:  http://localhost:${port}/debug`);
+    console.log(`  Socket.IO:    ws://localhost:${socketPort}`);
+    console.log('');
+    console.log('  Press Ctrl+C to stop');
+    console.log('');
+  }
+
+  return {
+    port,
+    socketPort,
+    async stop() {
+      await watcher.close();
+      await vite.close();
+      io.disconnectSockets(true);
+      io.close();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    },
+  };
 }
