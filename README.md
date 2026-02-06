@@ -15,8 +15,8 @@ npm install
 # Run tests
 npm test
 
-# Start dev server (Phase 2)
-# npm run dev
+# Start dev server
+npm run dev
 
 # Build and package for upload
 npm run pack
@@ -47,11 +47,15 @@ import type {
 ### Testing Utilities
 
 ```typescript
+// Engine logic testing
 import {
   createMockPlayers,  // Generate test players
   GameTester,         // Unit test wrapper
   GameSimulator       // E2E simulation
 } from '@littlepartytime/sdk/testing';
+
+// UI E2E testing with Playwright
+import { GamePreview } from '@littlepartytime/dev-kit/testing';
 ```
 
 ## Architecture
@@ -79,14 +83,33 @@ React re-renders
 
 See [`examples/number-guess`](./examples/number-guess) for a complete working example.
 
+## Local Dev Server
+
+Start the development server to preview and test your game locally:
+
+```bash
+npm run dev
+```
+
+This opens three pages:
+
+| Page | URL | Purpose |
+|------|-----|---------|
+| Preview | `http://localhost:4000/preview` | Single-player preview with engine running locally |
+| Multiplayer | `http://localhost:4000/play` | Multi-player testing via Socket.IO |
+| Debug | `http://localhost:4000/debug` | Real-time game state inspection |
+
+The Preview page runs the engine in the browser — `platform.send()` calls `engine.handleAction()` locally, with player view switching, game over detection, and state editing.
+
 ## Development Workflow
 
 1. **Create game**: `npx create-littlepartytime-game my-game`
-2. **Write tests**: Use `GameTester` for unit tests, `GameSimulator` for E2E
-3. **Implement engine**: Pure functions, no side effects
-4. **Build renderer**: React component with Tailwind CSS
-5. **Package**: `npm run pack` creates a `.zip` file
-6. **Upload**: Submit `.zip` to the admin panel
+2. **Implement engine**: Pure functions, no side effects
+3. **Build renderer**: React component with Tailwind CSS
+4. **Local preview**: `npm run dev` to test in browser immediately
+5. **Write tests**: `GameTester` for unit tests, `GameSimulator` for simulation, `GamePreview` for Playwright E2E
+6. **Package**: `npm run pack` creates a `.zip` file
+7. **Upload**: Submit `.zip` to the admin panel
 
 ## Documentation
 
