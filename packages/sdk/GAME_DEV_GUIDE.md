@@ -17,10 +17,16 @@ Each game is a standalone project:
 ```
 my-game/
 ├── package.json
-├── lpt.config.ts          # Project configuration (gameId, etc.)
+├── lpt.config.ts          # Project configuration (gameId for local dev)
+├── rules.md               # Game rules (Markdown, included in upload)
 ├── vite.config.ts         # Build configuration
 ├── vitest.config.ts       # Test configuration
 ├── tsconfig.json
+├── assets/                # Required game images
+│   ├── icon.png           # 1:1 (256x256+) - game list icon
+│   ├── banner.png         # 16:9 (640x360+) - lobby banner
+│   ├── cover.png          # 21:9 (840x360+) - store/featured cover
+│   └── splash.png         # 9:21 (360x840+) - loading screen
 ├── src/
 │   ├── config.ts          # GameConfig - metadata
 │   ├── engine.ts          # GameEngine - server-side logic
@@ -62,15 +68,19 @@ npm run pack
 import type { GameConfig } from "@littlepartytime/sdk";
 
 const config: GameConfig = {
-  id: "my-game",             // Unique identifier, lowercase kebab-case
   name: "My Game",           // Display name (Chinese preferred for CN users)
   description: "...",        // Brief description
-  coverImage: "/games/my-game/cover.png",
+  assets: {
+    icon: "assets/icon.png",       // 1:1 game list icon
+    banner: "assets/banner.png",   // 16:9 lobby banner
+    cover: "assets/cover.png",     // 21:9 store/featured cover
+    splash: "assets/splash.png",   // 9:21 loading screen
+  },
   minPlayers: 2,
   maxPlayers: 6,
   tags: ["strategy", "card"],
   version: "1.0.0",
-  sdkVersion: "1.0.0",
+  sdkVersion: "2.0.0",
 };
 
 export default config;
@@ -554,7 +564,11 @@ npm run pack
 This command:
 1. Runs `vite build` to compile your game
 2. Validates the build output (checks for bundle.js and engine.cjs)
-3. Creates a `.zip` file in the `dist/` directory
+3. Reads `GameConfig` from the built engine to extract metadata
+4. Validates the required image assets (format, dimensions, aspect ratio)
+5. Validates `rules.md` exists and is non-empty
+6. Generates `manifest.json` from your config
+7. Creates a `.zip` file in the `dist/` directory containing code, manifest, rules, and images
 
 ### Build Output
 
@@ -564,17 +578,31 @@ After running `pack`, your `dist/` folder will contain:
 dist/
 ├── bundle.js      # Client-side bundle (React component + dependencies)
 ├── engine.cjs     # Server-side engine (CommonJS for Node.js)
-└── <gameId>.zip   # Upload package containing both files
+└── <gameId>.zip   # Upload package
+```
+
+The `.zip` upload package contains:
+
+```
+<gameId>.zip
+├── manifest.json  # Auto-generated metadata (from GameConfig)
+├── rules.md       # Game rules
+├── bundle.js      # Client-side bundle
+├── engine.cjs     # Server-side engine
+├── icon.png       # 1:1 game icon
+├── banner.png     # 16:9 banner
+├── cover.png      # 21:9 cover
+└── splash.png     # 9:21 splash screen
 ```
 
 ### Configuration
 
-The `lpt.config.ts` file configures the build:
+The `lpt.config.ts` file configures local development. The `gameId` is a local project identifier used for the zip filename and dev server — it is NOT the platform game ID (the platform assigns that upon upload):
 
 ```typescript
 // lpt.config.ts
 export default {
-  gameId: 'my-awesome-game',  // Used for the zip filename
+  gameId: 'my-awesome-game',  // Local project identifier (zip filename, dev server)
 };
 ```
 
@@ -615,9 +643,29 @@ export default defineConfig({
 
 **The `pack` command will reject builds with extra chunk files** to prevent this issue.
 
-### Game Assets (Images, Audio, Fonts)
+### Required Game Images
 
-The upload package only contains `bundle.js` and `engine.cjs`. There is no separate asset upload mechanism. Handle assets as follows:
+Every game must include 4 images in the `assets/` directory. These are validated and packaged by the `pack` command.
+
+| Image | Aspect Ratio | Min Size | Purpose |
+|-------|-------------|----------|---------|
+| `icon.png` | 1:1 | 256x256 | Game list icon |
+| `banner.png` | 16:9 | 640x360 | Lobby banner |
+| `cover.png` | 21:9 | 840x360 | Store/featured cover |
+| `splash.png` | 9:21 | 360x840 | Loading/splash screen |
+
+**Rules:**
+- **Formats**: PNG or WebP only
+- **Aspect ratio**: Must match exactly (1% tolerance)
+- **Minimum dimensions**: Must meet or exceed the minimum size
+- **File size**: Warning if any image exceeds 2MB
+- **Paths**: Referenced in `GameConfig.assets` as relative paths from the project root
+
+The `pack` command reads these images, validates them, and includes them in the zip with canonical names (`icon.png`, `banner.png`, etc.).
+
+### In-Game Assets (Audio, Fonts, etc.)
+
+For assets used inside your game UI (not the 4 required images above), use one of these approaches:
 
 | Approach | When to Use | How |
 |----------|-------------|-----|
@@ -625,21 +673,6 @@ The upload package only contains `bundle.js` and `engine.cjs`. There is no separ
 | **External URL** | Large assets (images, audio, video) | Host on a CDN or external server, reference by absolute URL in your code |
 | **CSS/SVG** | UI elements, icons | Use Tailwind CSS utilities, inline SVG components, or CSS gradients/shapes |
 | **Emoji/Unicode** | Simple visual indicators | Use Unicode characters directly in JSX |
-
-**Example: inlining a small image**
-```typescript
-// Vite will inline this as a data URL if it's small enough
-import cardBack from "./assets/card-back.png";
-
-// Use in JSX
-<img src={cardBack} alt="card" />
-```
-
-**Example: external URL**
-```typescript
-const ASSET_BASE = "https://cdn.example.com/games/my-game";
-<img src={`${ASSET_BASE}/background.jpg`} alt="bg" />
-```
 
 > **Tip:** Keep your bundle under 5MB. The `pack` command warns if `bundle.js` exceeds this limit.
 
@@ -757,15 +790,19 @@ See the [`examples/number-guess`](../../examples/number-guess) directory for a c
 import type { GameConfig } from "@littlepartytime/sdk";
 
 const config: GameConfig = {
-  id: "number-guess",
   name: "Guess the Number",
   description: "Take turns guessing a secret number between 1-100. The range narrows with each guess!",
-  coverImage: "/games/number-guess/cover.png",
+  assets: {
+    icon: "assets/icon.png",
+    banner: "assets/banner.png",
+    cover: "assets/cover.png",
+    splash: "assets/splash.png",
+  },
   minPlayers: 2,
   maxPlayers: 8,
   tags: ["casual", "party"],
   version: "1.0.0",
-  sdkVersion: "1.0.0",
+  sdkVersion: "2.0.0",
 };
 
 export default config;

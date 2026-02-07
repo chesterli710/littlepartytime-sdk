@@ -11,11 +11,21 @@ export interface GameState {
   data: Record<string, unknown>;
 }
 
+export interface GameAssets {
+  /** 1:1 game list icon (relative path from project root, .png or .webp) */
+  icon: string;
+  /** 16:9 lobby banner */
+  banner: string;
+  /** 21:9 store/featured cover */
+  cover: string;
+  /** 9:21 loading/splash screen */
+  splash: string;
+}
+
 export interface GameConfig {
-  id: string;
   name: string;
   description: string;
-  coverImage: string;
+  assets: GameAssets;
   minPlayers: number;
   maxPlayers: number;
   tags: string[];

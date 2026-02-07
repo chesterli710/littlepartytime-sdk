@@ -129,6 +129,8 @@ async function main() {
   console.log('');
 }
 
+const BINARY_EXTENSIONS = new Set(['.png', '.webp', '.jpg', '.jpeg', '.gif', '.ico']);
+
 function copyDir(src: string, dest: string, vars: Record<string, string>) {
   fs.mkdirSync(dest, { recursive: true });
 
@@ -141,12 +143,18 @@ function copyDir(src: string, dest: string, vars: Record<string, string>) {
     if (entry.isDirectory()) {
       copyDir(srcPath, destPath, vars);
     } else {
-      let content = fs.readFileSync(srcPath, 'utf-8');
-      // Replace template variables
-      for (const [key, value] of Object.entries(vars)) {
-        content = content.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
+      const ext = path.extname(destName).toLowerCase();
+      if (BINARY_EXTENSIONS.has(ext)) {
+        // Copy binary files without template processing
+        fs.copyFileSync(srcPath, destPath);
+      } else {
+        let content = fs.readFileSync(srcPath, 'utf-8');
+        // Replace template variables
+        for (const [key, value] of Object.entries(vars)) {
+          content = content.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
+        }
+        fs.writeFileSync(destPath, content);
       }
-      fs.writeFileSync(destPath, content);
       console.log(`  created ${path.relative(process.cwd(), destPath)}`);
     }
   }
