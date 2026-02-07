@@ -410,7 +410,7 @@ The Preview page runs your **engine locally in the browser** — no network need
 
 Features:
 - **Engine integration**: `platform.send()` calls `engine.handleAction()` locally, computes `getPlayerView()`, and triggers `stateUpdate` events automatically
-- **Player switching**: Switch between players (2-8) via a dropdown to see each player's filtered view
+- **Player switching**: Switch between players (2-32) via a dropdown to see each player's filtered view
 - **State editor**: View and override the full game state as JSON for debugging
 - **Action log**: See all actions sent by players in real-time
 - **Game over detection**: Automatically detects when `isGameOver()` returns true and displays results
@@ -577,6 +577,71 @@ export default {
   gameId: 'my-awesome-game',  // Used for the zip filename
 };
 ```
+
+### Vite Configuration (Important)
+
+Your `vite.config.ts` **must** use a single entry point with `fileName` mapping. Do NOT use multiple entry points, as Vite will extract shared code into separate chunk files that won't be included in the upload package.
+
+**Recommended configuration:**
+
+```typescript
+// vite.config.ts
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import path from "path";
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    lib: {
+      entry: path.resolve(__dirname, "src/index.ts"),  // Single entry point
+      formats: ["es", "cjs"],
+      fileName: (format) => {
+        if (format === "es") return "bundle.js";
+        if (format === "cjs") return "engine.cjs";
+        return `bundle.${format}.js`;
+      },
+    },
+    rollupOptions: {
+      external: ["react", "react-dom", "react/jsx-runtime", "@littlepartytime/sdk"],
+    },
+    outDir: "dist",
+    emptyOutDir: true,
+  },
+});
+```
+
+**Why single entry?** With multiple entry points (e.g., separate `renderer.tsx` and `engine.ts`), Vite extracts shared code into chunk files like `types-D0Vb4wB4.js`. The `pack` command only includes `bundle.js` and `engine.cjs` in the upload package — extra chunks will be missing at runtime, causing 404 errors.
+
+**The `pack` command will reject builds with extra chunk files** to prevent this issue.
+
+### Game Assets (Images, Audio, Fonts)
+
+The upload package only contains `bundle.js` and `engine.cjs`. There is no separate asset upload mechanism. Handle assets as follows:
+
+| Approach | When to Use | How |
+|----------|-------------|-----|
+| **Inline in bundle** | Small assets (icons, sounds < 100KB) | Vite automatically inlines assets below `assetsInlineLimit` (default 4KB) as data URLs. Increase the limit in `vite.config.ts` if needed: `build: { assetsInlineLimit: 100000 }` |
+| **External URL** | Large assets (images, audio, video) | Host on a CDN or external server, reference by absolute URL in your code |
+| **CSS/SVG** | UI elements, icons | Use Tailwind CSS utilities, inline SVG components, or CSS gradients/shapes |
+| **Emoji/Unicode** | Simple visual indicators | Use Unicode characters directly in JSX |
+
+**Example: inlining a small image**
+```typescript
+// Vite will inline this as a data URL if it's small enough
+import cardBack from "./assets/card-back.png";
+
+// Use in JSX
+<img src={cardBack} alt="card" />
+```
+
+**Example: external URL**
+```typescript
+const ASSET_BASE = "https://cdn.example.com/games/my-game";
+<img src={`${ASSET_BASE}/background.jpg`} alt="bg" />
+```
+
+> **Tip:** Keep your bundle under 5MB. The `pack` command warns if `bundle.js` exceeds this limit.
 
 ### Submitting Your Game
 
