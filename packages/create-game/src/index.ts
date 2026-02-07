@@ -127,6 +127,11 @@ async function main() {
   console.log('  npm test');
   console.log('  npm run dev');
   console.log('');
+  console.log('Development guide:');
+  console.log('');
+  console.log('  npm run guide');
+  console.log('  https://github.com/chesterli710/littlepartytime-sdk/blob/main/packages/sdk/GAME_DEV_GUIDE.md');
+  console.log('');
 }
 
 const BINARY_EXTENSIONS = new Set(['.png', '.webp', '.jpg', '.jpeg', '.gif', '.ico']);

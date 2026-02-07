@@ -22,7 +22,7 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "files": ["dist"],
+  "files": ["dist", "GAME_DEV_GUIDE.md"],
   "keywords": ["boardgame", "sdk", "game-engine", "littlepartytime"],
   "license": "MIT",
   "repository": {
