@@ -1,6 +1,6 @@
 {
   "name": "@littlepartytime/sdk",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Game SDK for Little Party Time platform - type definitions and testing utilities",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
