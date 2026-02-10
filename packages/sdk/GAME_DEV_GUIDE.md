@@ -753,6 +753,113 @@ Use these CSS variables / Tailwind classes for consistent styling:
 | Display font | `--font-display` | `font-display` |
 | Body font | `--font-body` | `font-body` |
 
+## Platform Runtime Constraints
+
+The production platform runs game engines inside a Node.js `vm` sandbox. The dev-kit (`npm run dev`) automatically enforces key constraints so issues surface during local development, not after deployment.
+
+### Timer APIs Are Disabled
+
+The sandbox replaces `setTimeout`, `setInterval`, `clearTimeout`, and `clearInterval` with no-ops. Calling them inside engine code will:
+
+- **In production**: silently do nothing (the callback is never executed)
+- **In dev-kit**: print a warning to the console and return `0`
+
+```typescript
+// BAD - will not work in production
+handleAction(state, playerId, action) {
+  setTimeout(() => {
+    // This callback will NEVER run in the sandbox
+  }, 2000);
+  return { ...state, phase: 'animating' };
+}
+
+// GOOD - let the client handle timing
+handleAction(state, playerId, action) {
+  return { ...state, phase: 'animating' };
+}
+// In renderer: after animation completes, send a follow-up action:
+//   platform.send({ type: 'ANIMATION_DONE' })
+// Engine handles ANIMATION_DONE to advance to the next phase.
+```
+
+### State Must Be JSON-Serializable
+
+The platform stores game state in Redis via `JSON.stringify` / `JSON.parse` round-trips. Non-serializable types will silently lose data:
+
+| Type | After JSON Round-Trip | Result |
+|------|----------------------|--------|
+| `Map` | `{}` | Data lost |
+| `Set` | `{}` | Data lost |
+| `Date` | `"2026-02-10T..."` (string) | Type changed |
+| `undefined` | Removed | Field disappears |
+| `RegExp` | `{}` | Data lost |
+| Function | Removed | Lost |
+
+The dev-kit checks your state after every `init()` and `handleAction()` call and prints warnings if non-serializable types are detected.
+
+```typescript
+// BAD
+data: {
+  players: new Map([['p1', { score: 0 }]]),
+  seen: new Set(['card-1']),
+  createdAt: new Date(),
+}
+
+// GOOD
+data: {
+  players: { p1: { score: 0 } },
+  seen: ['card-1'],
+  createdAt: '2026-02-10T00:00:00.000Z',
+}
+```
+
+### Engine Instance Is Shared
+
+The platform loads your engine bundle once and reuses it across all game rooms. This means **module-level mutable variables are shared between games**:
+
+```typescript
+// BAD - shared across all rooms!
+let gameCounter = 0;
+
+const engine: GameEngine = {
+  init(players) {
+    gameCounter++; // Will increment across different rooms
+    // ...
+  },
+};
+
+// GOOD - all state lives in GameState
+const engine: GameEngine = {
+  init(players) {
+    return {
+      phase: 'playing',
+      players: players.map(p => ({ id: p.id })),
+      data: { roundNumber: 1 },  // State is per-room
+    };
+  },
+};
+```
+
+### Restricted Global Variables
+
+The following globals are `undefined` in the sandbox:
+
+| Global | Alternative |
+|--------|-------------|
+| `fetch` | Not available. Engines cannot make network calls. |
+| `process` | Not available. |
+| `globalThis` | Not available. |
+| `global` | Not available. |
+
+Available built-ins: `Math`, `JSON`, `Date`, `Array`, `Object`, `Map`, `Set`, `Number`, `String`, `Boolean`, `Error`, `TypeError`, `RangeError`, `parseInt`, `parseFloat`, `isNaN`, `isFinite`, `console` (log/error/warn).
+
+### `require()` Whitelist
+
+Only the following modules can be required in engine code (all are stubs for compatibility):
+`react`, `react/jsx-runtime`, `react-dom`, `react-dom/client`
+
+Any other `require()` call will throw an error.
+
 ## Data Flow Diagram
 
 ```

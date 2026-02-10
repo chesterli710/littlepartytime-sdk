@@ -2,6 +2,7 @@
 import { Server } from 'socket.io';
 import http from 'http';
 import { loadEngine, clearEngineCache, getEngine } from './engine-loader';
+import { createSandboxedEngine } from './sandbox-guard';
 import * as GameRoom from './game-room';
 
 export interface SocketServerOptions {
@@ -24,8 +25,8 @@ export function createSocketServer(options: SocketServerOptions): {
     console.log(`[Socket] ${msg}`);
   };
 
-  // Load engine
-  let engine = loadEngine(projectDir);
+  // Load engine with sandbox guard
+  let engine = createSandboxedEngine(loadEngine(projectDir));
   log(`Engine loaded from ${projectDir}`);
 
   // Create room
@@ -174,7 +175,7 @@ export function createSocketServer(options: SocketServerOptions): {
     getRoom: () => room,
     reloadEngine: () => {
       clearEngineCache();
-      engine = loadEngine(projectDir);
+      engine = createSandboxedEngine(loadEngine(projectDir));
       log(`Engine reloaded`);
     },
   };
