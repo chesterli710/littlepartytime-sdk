@@ -1,8 +1,50 @@
 // packages/dev-kit/src/commands/dev.ts
 import path from 'path';
-import { createServer, ViteDevServer } from 'vite';
+import { createServer, build, ViteDevServer } from 'vite';
 import { createSocketServer } from '../server/socket-server';
 import chokidar from 'chokidar';
+
+function createEngineRebuilder(projectDir: string, silent: boolean) {
+  let building = false;
+  let pendingBuild = false;
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  async function runBuild() {
+    if (building) {
+      pendingBuild = true;
+      return;
+    }
+    building = true;
+    if (!silent) {
+      console.log('[Dev] Source changed, rebuilding engine...');
+    }
+    try {
+      await build({
+        configFile: path.join(projectDir, 'vite.config.ts'),
+        logLevel: 'warn',
+      });
+      if (!silent) {
+        console.log('[Dev] Engine rebuild complete.');
+      }
+    } catch (err) {
+      console.error('[Dev] Engine rebuild failed:', (err as Error).message);
+    } finally {
+      building = false;
+      if (pendingBuild) {
+        pendingBuild = false;
+        runBuild();
+      }
+    }
+  }
+
+  return (filePath: string) => {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      debounceTimer = null;
+      runBuild();
+    }, 300);
+  };
+}
 
 export interface DevOptions {
   port?: number;
@@ -33,15 +75,25 @@ export async function devCommand(projectDir: string, options: DevOptions = {}): 
     projectDir,
   });
 
-  // Watch for engine changes
+  // Watch for engine build output changes (triggers reload)
   const enginePath = path.join(projectDir, 'dist', 'engine.cjs');
-  const watcher = chokidar.watch(enginePath, { ignoreInitial: true });
-  watcher.on('change', () => {
+  const distWatcher = chokidar.watch(enginePath, { ignoreInitial: true });
+  distWatcher.on('change', () => {
     if (!options.silent) {
       console.log('[Dev] Engine changed, reloading...');
     }
     reloadEngine();
   });
+
+  // Watch source files and auto-rebuild engine
+  const srcDir = path.join(projectDir, 'src');
+  const srcWatcher = chokidar.watch(srcDir, {
+    ignoreInitial: true,
+    ignored: /node_modules/,
+  });
+  const triggerRebuild = createEngineRebuilder(projectDir, !!options.silent);
+  srcWatcher.on('change', triggerRebuild);
+  srcWatcher.on('add', triggerRebuild);
 
   // Start Vite dev server
   const webappDir = path.join(__dirname, '..', 'webapp');
@@ -81,7 +133,8 @@ export async function devCommand(projectDir: string, options: DevOptions = {}): 
     port,
     socketPort,
     async stop() {
-      await watcher.close();
+      await distWatcher.close();
+      await srcWatcher.close();
       await vite.close();
       io.disconnectSockets(true);
       io.close();
