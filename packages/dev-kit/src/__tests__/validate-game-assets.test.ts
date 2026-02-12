@@ -105,30 +105,30 @@ describe('validateGameAssets', () => {
     expect(result.entries).toHaveLength(allowed.length);
   });
 
-  it('should reject files exceeding 10MB', () => {
+  it('should reject files exceeding 20MB', () => {
     const dir = makeTempDir();
     const assetsDir = path.join(dir, 'assets');
     fs.mkdirSync(assetsDir);
-    // Create a file just over 10MB
-    fs.writeFileSync(path.join(assetsDir, 'huge.png'), Buffer.alloc(10 * 1024 * 1024 + 1));
+    // Create a file just over 20MB
+    fs.writeFileSync(path.join(assetsDir, 'huge.png'), Buffer.alloc(20 * 1024 * 1024 + 1));
 
     const result = validateGameAssets(assetsDir, platformFiles);
     expect(result.valid).toBe(false);
-    expect(result.errors.some(e => e.includes('exceeds 10MB'))).toBe(true);
+    expect(result.errors.some(e => e.includes('exceeds 20MB'))).toBe(true);
   });
 
-  it('should reject when total assets exceed 50MB', () => {
+  it('should reject when total assets exceed 100MB', () => {
     const dir = makeTempDir();
     const assetsDir = path.join(dir, 'assets');
     fs.mkdirSync(assetsDir);
-    // Create 6 files of 9MB each = 54MB total (each under 10MB limit)
+    // Create 6 files of 19MB each = 114MB total (each under 20MB limit)
     for (let i = 0; i < 6; i++) {
-      fs.writeFileSync(path.join(assetsDir, `file${i}.png`), Buffer.alloc(9 * 1024 * 1024));
+      fs.writeFileSync(path.join(assetsDir, `file${i}.png`), Buffer.alloc(19 * 1024 * 1024));
     }
 
     const result = validateGameAssets(assetsDir, platformFiles);
     expect(result.valid).toBe(false);
-    expect(result.errors.some(e => e.includes('exceeds 50MB'))).toBe(true);
+    expect(result.errors.some(e => e.includes('exceeds 100MB'))).toBe(true);
   });
 
   it('should reject paths containing ".."', () => {

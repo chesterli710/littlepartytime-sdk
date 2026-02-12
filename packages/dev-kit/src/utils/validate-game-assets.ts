@@ -8,8 +8,8 @@ const ALLOWED_EXTENSIONS = new Set([
   '.woff2', '.woff',
 ]);
 
-const MAX_SINGLE_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_TOTAL_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_SINGLE_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const MAX_TOTAL_SIZE = 100 * 1024 * 1024; // 100MB
 
 export interface GameAssetEntry {
   /** Relative path from assets/ dir, e.g. "cards/king.png" */
@@ -51,14 +51,14 @@ export function validateGameAssets(
 
     if (entry.size > MAX_SINGLE_FILE_SIZE) {
       errors.push(
-        `${entry.relativePath}: file is ${(entry.size / 1024 / 1024).toFixed(1)}MB, exceeds 10MB limit`,
+        `${entry.relativePath}: file is ${(entry.size / 1024 / 1024).toFixed(1)}MB, exceeds 20MB limit`,
       );
     }
   }
 
   if (totalSize > MAX_TOTAL_SIZE) {
     errors.push(
-      `Total assets size is ${(totalSize / 1024 / 1024).toFixed(1)}MB, exceeds 50MB limit`,
+      `Total assets size is ${(totalSize / 1024 / 1024).toFixed(1)}MB, exceeds 100MB limit`,
     );
   }
 

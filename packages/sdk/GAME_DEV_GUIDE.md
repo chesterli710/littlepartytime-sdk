@@ -714,8 +714,8 @@ export default function GameRenderer({ platform, state }: GameRendererProps) {
 
 | Rule | Limit |
 |------|-------|
-| Single file size | ≤ 10MB |
-| Total assets size | ≤ 50MB |
+| Single file size | ≤ 20MB |
+| Total assets size | ≤ 100MB |
 | Allowed file types | `.png`, `.jpg`, `.jpeg`, `.webp`, `.svg`, `.gif`, `.mp3`, `.wav`, `.ogg`, `.json`, `.woff2`, `.woff` |
 | Path rules | No `..`, no spaces |
 
