@@ -113,6 +113,7 @@ export async function devCommand(projectDir: string, options: DevOptions = {}): 
     resolve: {
       alias: {
         '/src': path.join(projectDir, 'src'),
+        '/assets': path.join(projectDir, 'assets'),
       },
     },
   });

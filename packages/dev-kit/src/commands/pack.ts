@@ -4,6 +4,7 @@ import path from 'path';
 import archiver from 'archiver';
 import { validateBundle } from '../utils/validate-bundle';
 import { validateAssets, ASSET_SPECS } from '../utils/validate-assets';
+import { validateGameAssets } from '../utils/validate-game-assets';
 import { generateManifest, getExtension } from '../utils/manifest';
 
 export async function packCommand(projectDir: string): Promise<void> {
@@ -102,10 +103,38 @@ export async function packCommand(projectDir: string): Promise<void> {
   }
   console.log('  rules.md found');
 
-  // Step 7: Generate manifest
+  // Step 7: Validate game custom assets (assets/ directory, excluding platform images)
+  const assetsDir = path.join(projectDir, 'assets');
+  const platformAssetFiles = new Set<string>();
+  for (const spec of ASSET_SPECS) {
+    const assetPath = assets[spec.key];
+    if (assetPath) {
+      const basename = path.basename(assetPath);
+      platformAssetFiles.add(basename);
+    }
+  }
+
+  const gameAssetsResult = validateGameAssets(assetsDir, platformAssetFiles);
+
+  for (const warning of gameAssetsResult.warnings) {
+    console.log(`  WARNING: ${warning}`);
+  }
+
+  if (!gameAssetsResult.valid) {
+    for (const error of gameAssetsResult.errors) {
+      console.error(`  ERROR: ${error}`);
+    }
+    process.exit(1);
+  }
+
+  if (gameAssetsResult.entries.length > 0) {
+    console.log(`  Found ${gameAssetsResult.entries.length} custom asset(s) (${(gameAssetsResult.totalSize / 1024).toFixed(1)}KB total)`);
+  }
+
+  // Step 8: Generate manifest
   const manifest = generateManifest(config as Parameters<typeof generateManifest>[0]);
 
-  // Step 8: Create zip
+  // Step 9: Create zip
   const zipPath = path.join(distDir, `${gameId}.zip`);
   console.log(`\nPackaging to ${gameId}.zip...`);
 
@@ -133,6 +162,11 @@ export async function packCommand(projectDir: string): Promise<void> {
 
     // Rules
     archive.file(rulesPath, { name: 'rules.md' });
+
+    // Game custom assets
+    for (const entry of gameAssetsResult.entries) {
+      archive.file(entry.absolutePath, { name: `assets/${entry.relativePath}` });
+    }
 
     archive.finalize();
   });

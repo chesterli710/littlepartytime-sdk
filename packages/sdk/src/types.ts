@@ -27,4 +27,10 @@ export interface Platform {
   on(event: string, handler: (...args: unknown[]) => void): void;
   off(event: string, handler: (...args: unknown[]) => void): void;
   reportResult(result: GameResult): void;
+  /**
+   * 获取游戏资产的运行时 URL。
+   * @param path - 相对于游戏 assets/ 目录的路径，如 "cards/king.png"、"sounds/flip.mp3"
+   * @returns 可直接用于 <img src> / <audio src> / fetch() 的完整 URL
+   */
+  getAssetUrl(path: string): string;
 }

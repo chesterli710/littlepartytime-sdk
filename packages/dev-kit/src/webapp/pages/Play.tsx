@@ -51,6 +51,7 @@ export default function Play() {
       if (event === 'stateUpdate') socket.off('game:state', handler as any);
     },
     reportResult: () => {},
+    getAssetUrl: (assetPath: string) => `/assets/${assetPath}`,
   } : null;
 
   if (!joined) {

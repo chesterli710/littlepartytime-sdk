@@ -120,6 +120,7 @@ export default function Preview() {
       reportResult: (result: any) => {
         console.log('Game result reported:', result);
       },
+      getAssetUrl: (assetPath: string) => `/assets/${assetPath}`,
     };
   }, [engine]);
 

@@ -22,11 +22,16 @@ my-game/
 ├── vite.config.ts         # Build configuration
 ├── vitest.config.ts       # Test configuration
 ├── tsconfig.json
-├── assets/                # Required game images
+├── assets/                # Game images and custom assets
 │   ├── icon.png           # 1:1 (256x256+) - game list icon
 │   ├── banner.png         # 16:9 (640x360+) - lobby banner
 │   ├── cover.png          # 21:9 (840x360+) - store/featured cover
-│   └── splash.png         # 9:21 (360x840+) - loading screen
+│   ├── splash.png         # 9:21 (360x840+) - loading screen
+│   ├── cards/             # Custom game assets (optional)
+│   │   ├── king.png
+│   │   └── queen.png
+│   └── sounds/
+│       └── flip.mp3
 ├── src/
 │   ├── config.ts          # GameConfig - metadata
 │   ├── engine.ts          # GameEngine - server-side logic
@@ -592,7 +597,12 @@ The `.zip` upload package contains:
 ├── icon.png       # 1:1 game icon
 ├── banner.png     # 16:9 banner
 ├── cover.png      # 21:9 cover
-└── splash.png     # 9:21 splash screen
+├── splash.png     # 9:21 splash screen
+└── assets/        # Custom game assets (if any)
+    ├── cards/
+    │   └── king.png
+    └── sounds/
+        └── flip.mp3
 ```
 
 ### Configuration
@@ -663,18 +673,61 @@ Every game must include 4 images in the `assets/` directory. These are validated
 
 The `pack` command reads these images, validates them, and includes them in the zip with canonical names (`icon.png`, `banner.png`, etc.).
 
-### In-Game Assets (Audio, Fonts, etc.)
+### Custom Game Assets
 
-For assets used inside your game UI (not the 4 required images above), use one of these approaches:
+For assets used inside your game UI (card images, sound effects, fonts, etc.), place them in subdirectories under `assets/`:
+
+```
+assets/
+├── icon.png          # Platform display images (root level, required)
+├── banner.png
+├── cover.png
+├── splash.png
+├── cards/            # Custom game assets (subdirectories)
+│   ├── king.png
+│   └── queen.png
+└── sounds/
+    └── flip.mp3
+```
+
+Access custom assets in your renderer via `platform.getAssetUrl()`:
+
+```tsx
+export default function GameRenderer({ platform, state }: GameRendererProps) {
+  const cardImg = platform.getAssetUrl('cards/king.png');
+  const flipSound = platform.getAssetUrl('sounds/flip.mp3');
+
+  return (
+    <div>
+      <img src={cardImg} alt="King" />
+      <audio src={flipSound} />
+    </div>
+  );
+}
+```
+
+**How it works:**
+- During `lpt-dev-kit dev`: returns a local URL (e.g., `http://localhost:4000/assets/cards/king.png`)
+- In production: returns a CDN URL (the platform uploads assets to OSS automatically)
+
+**Validation rules (enforced by `pack` command):**
+
+| Rule | Limit |
+|------|-------|
+| Single file size | ≤ 10MB |
+| Total assets size | ≤ 50MB |
+| Allowed file types | `.png`, `.jpg`, `.jpeg`, `.webp`, `.svg`, `.gif`, `.mp3`, `.wav`, `.ogg`, `.json`, `.woff2`, `.woff` |
+| Path rules | No `..`, no spaces |
+
+**Alternative approaches for small assets:**
 
 | Approach | When to Use | How |
 |----------|-------------|-----|
-| **Inline in bundle** | Small assets (icons, sounds < 100KB) | Vite automatically inlines assets below `assetsInlineLimit` (default 4KB) as data URLs. Increase the limit in `vite.config.ts` if needed: `build: { assetsInlineLimit: 100000 }` |
-| **External URL** | Large assets (images, audio, video) | Host on a CDN or external server, reference by absolute URL in your code |
-| **CSS/SVG** | UI elements, icons | Use Tailwind CSS utilities, inline SVG components, or CSS gradients/shapes |
-| **Emoji/Unicode** | Simple visual indicators | Use Unicode characters directly in JSX |
+| **Inline in bundle** | Tiny assets (< 4KB) | Vite automatically inlines as data URLs |
+| **CSS/SVG** | UI elements, icons | Tailwind CSS utilities or inline SVG components |
+| **Emoji/Unicode** | Simple visual indicators | Unicode characters directly in JSX |
 
-> **Tip:** Keep your bundle under 5MB. The `pack` command warns if `bundle.js` exceeds this limit.
+> **Tip:** Use `platform.getAssetUrl()` for assets 100KB+ instead of inlining them into the bundle.
 
 ### Submitting Your Game
 
@@ -695,6 +748,7 @@ For assets used inside your game UI (not the 4 required images above), use one o
 | `on(event, handler)` | Listens for events from the server |
 | `off(event, handler)` | Removes an event listener |
 | `reportResult(result)` | Reports game results (called by platform, not games) |
+| `getAssetUrl(path)` | Returns the runtime URL for a custom asset (e.g., `"cards/king.png"` → CDN URL) |
 
 ### Events the renderer should listen for
 
