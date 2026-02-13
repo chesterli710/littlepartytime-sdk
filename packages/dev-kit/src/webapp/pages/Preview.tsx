@@ -180,8 +180,8 @@ export default function Preview() {
 
   return (
     <div className="flex gap-4 h-[calc(100vh-80px)]">
-      {/* Renderer — fixed width matching the phone body */}
-      <div className="shrink-0 h-full" style={{ width: 420 }}>
+      {/* Renderer — half the screen width */}
+      <div className="h-full" style={{ width: '50%' }}>
         <PhoneFrame>
           {GameRenderer && platform && viewState ? (
             <GameRenderer platform={platform} state={viewState} />
@@ -218,10 +218,25 @@ export default function Preview() {
                 const isActive = i === playerIndex;
                 const hue = (i * 137) % 360; // deterministic color per player
                 const playerState = fullState?.players?.find((ps: any) => ps.id === p.id);
+                // Fallback chain: 1) PlayerState field  2) GameState.data mapping table
                 const ROLE_KEYS = ['role', 'character', 'team', 'class', 'job', 'faction', 'type'];
-                const roleEntry = playerState
-                  ? Object.entries(playerState).find(([k]) => ROLE_KEYS.includes(k.toLowerCase()))
-                  : undefined;
+                const DATA_MAP_KEYS = ['playerRoles', 'roles', 'playerCharacters', 'characters', 'playerTeams', 'teams'];
+                let roleLabel: string | undefined;
+                // Try PlayerState direct field
+                if (playerState) {
+                  const entry = Object.entries(playerState).find(([k]) => ROLE_KEYS.includes(k.toLowerCase()));
+                  if (entry) roleLabel = String(entry[1]);
+                }
+                // Try GameState.data lookup table
+                if (!roleLabel && fullState?.data) {
+                  for (const mapKey of DATA_MAP_KEYS) {
+                    const map = fullState.data[mapKey];
+                    if (map && typeof map === 'object' && !Array.isArray(map)) {
+                      const val = (map as Record<string, unknown>)[p.id];
+                      if (val != null) { roleLabel = String(val); break; }
+                    }
+                  }
+                }
                 return (
                   <button
                     key={p.id}
@@ -246,9 +261,9 @@ export default function Preview() {
                           <span className="text-[10px] text-amber-400 shrink-0">HOST</span>
                         )}
                       </div>
-                      {roleEntry && (
+                      {roleLabel && (
                         <div className="text-[10px] text-zinc-500 truncate">
-                          {String(roleEntry[1])}
+                          {roleLabel}
                         </div>
                       )}
                     </div>

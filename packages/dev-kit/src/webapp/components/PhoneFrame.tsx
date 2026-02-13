@@ -41,7 +41,7 @@ export default function PhoneFrame({ children }: { children: React.ReactNode }) 
     <div
       ref={containerRef}
       className="flex items-center justify-center h-full overflow-hidden"
-      style={{ minWidth: 0, minHeight: 0 }}
+      style={{ flex: 1, minWidth: 0, minHeight: 0 }}
     >
       {/* Wrapper sized to the scaled phone for correct layout flow */}
       <div style={{ width: BODY_W * scale, height: BODY_H * scale, flexShrink: 0 }}>
