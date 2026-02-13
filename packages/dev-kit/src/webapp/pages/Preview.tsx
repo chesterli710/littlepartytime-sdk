@@ -191,15 +191,35 @@ export default function Preview() {
         {/* Player Switcher */}
         <div className="bg-zinc-900 rounded-lg p-3">
           <h3 className="text-sm font-bold text-zinc-400 mb-2">Current Player</h3>
-          <select
-            value={playerIndex}
-            onChange={(e) => setPlayerIndex(Number(e.target.value))}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-sm"
-          >
-            {mockPlayers.map((p, i) => (
-              <option key={p.id} value={i}>{p.nickname}{p.isHost ? ' (Host)' : ''}</option>
-            ))}
-          </select>
+          <div className="space-y-1">
+            {mockPlayers.map((p, i) => {
+              const isActive = i === playerIndex;
+              const hue = (i * 137) % 360; // deterministic color per player
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setPlayerIndex(i)}
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left transition-colors ${
+                    isActive
+                      ? 'bg-amber-600/20 ring-1 ring-amber-500 text-white'
+                      : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300'
+                  }`}
+                >
+                  {/* Avatar */}
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                    style={{ background: `hsl(${hue}, 55%, 45%)` }}
+                  >
+                    {p.nickname[0]}
+                  </div>
+                  <span className="truncate">{p.nickname}</span>
+                  {p.isHost && (
+                    <span className="ml-auto text-[10px] text-amber-400 shrink-0">HOST</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Game Result */}
