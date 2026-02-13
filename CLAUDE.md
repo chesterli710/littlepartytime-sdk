@@ -108,7 +108,7 @@ npm run build
 # 检查产物
 npm pack --dry-run
 
-# 发布（当前账号 2FA 为 auth-only，发布无需额外验证）
+# 发布（需要 OTP 验证，由开发者手动执行）
 npm publish
 
 # 验证发布成功
