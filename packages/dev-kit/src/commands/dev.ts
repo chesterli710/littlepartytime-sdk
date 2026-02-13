@@ -1,8 +1,60 @@
 // packages/dev-kit/src/commands/dev.ts
 import path from 'path';
-import { createServer, build, ViteDevServer } from 'vite';
+import fs from 'fs';
+import { createServer, build, ViteDevServer, Plugin } from 'vite';
 import { createSocketServer } from '../server/socket-server';
 import chokidar from 'chokidar';
+
+const MIME_TYPES: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+  '.gif': 'image/gif',
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.ogg': 'audio/ogg',
+  '.json': 'application/json',
+  '.woff2': 'font/woff2',
+  '.woff': 'font/woff',
+};
+
+/**
+ * Vite plugin that serves game assets from the project's assets/ directory.
+ * resolve.alias only works for JS module imports, not for HTTP requests
+ * from <img src> / <audio src> tags. This plugin adds a middleware to
+ * handle those static asset requests.
+ */
+function serveGameAssets(projectDir: string): Plugin {
+  return {
+    name: 'serve-game-assets',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (!req.url || !req.url.startsWith('/assets/')) return next();
+
+        const relativePath = req.url.slice('/assets/'.length);
+        const filePath = path.join(projectDir, 'assets', relativePath);
+
+        // Prevent directory traversal
+        if (!filePath.startsWith(path.join(projectDir, 'assets'))) {
+          res.statusCode = 403;
+          res.end('Forbidden');
+          return;
+        }
+
+        if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+          return next();
+        }
+
+        const ext = path.extname(filePath).toLowerCase();
+        const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+        res.setHeader('Content-Type', contentType);
+        fs.createReadStream(filePath).pipe(res);
+      });
+    },
+  };
+}
 
 function createEngineRebuilder(projectDir: string, silent: boolean) {
   let building = false;
@@ -103,7 +155,7 @@ export async function devCommand(projectDir: string, options: DevOptions = {}): 
 
   const vite: ViteDevServer = await createServer({
     root: webappDir,
-    plugins: [react()],
+    plugins: [react(), serveGameAssets(projectDir)],
     server: {
       port,
       fs: {
