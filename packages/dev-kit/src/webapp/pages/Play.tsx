@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
+import PhoneFrame from '../components/PhoneFrame';
 
 export default function Play() {
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -117,14 +118,16 @@ export default function Play() {
 
   // Playing or ended
   return (
-    <div className="h-[calc(100vh-80px)]">
-      {GameRenderer && platform && gameState ? (
-        <GameRenderer platform={platform} state={gameState} />
-      ) : (
-        <div className="p-4 text-zinc-500">Loading game...</div>
-      )}
+    <div className="h-[calc(100vh-80px)] relative">
+      <PhoneFrame>
+        {GameRenderer && platform && gameState ? (
+          <GameRenderer platform={platform} state={gameState} />
+        ) : (
+          <div className="p-4 text-zinc-500">Loading game...</div>
+        )}
+      </PhoneFrame>
       {room.phase === 'ended' && isHost && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999]">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[9999]">
           <button
             onClick={() => socket?.emit('game:playAgain')}
             className="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2 rounded-full font-semibold"

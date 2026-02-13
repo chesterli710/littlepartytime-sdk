@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import PhoneFrame from '../components/PhoneFrame';
 
 const PLAYER_NAMES = ['Alice', 'Bob', 'Carol', 'Dave', 'Eve', 'Frank', 'Grace', 'Heidi'];
 
@@ -162,7 +163,7 @@ export default function Preview() {
   return (
     <div className="flex gap-4 h-[calc(100vh-80px)]">
       {/* Renderer */}
-      <div className="flex-1 bg-zinc-900 rounded-lg overflow-auto">
+      <PhoneFrame>
         {GameRenderer && platform && viewState ? (
           <GameRenderer platform={platform} state={viewState} />
         ) : (
@@ -170,7 +171,7 @@ export default function Preview() {
             {!engine ? 'Loading engine...' : 'Initializing game...'}
           </div>
         )}
-      </div>
+      </PhoneFrame>
 
       {/* Control Panel */}
       <div className="w-80 flex flex-col gap-4 overflow-auto">
