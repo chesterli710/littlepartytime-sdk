@@ -9,6 +9,10 @@ const INNER_R = OUTER_R - BEZEL;
 const BODY_W = SCREEN_W + BEZEL * 2;
 const BODY_H = SCREEN_H + BEZEL * 2;
 
+// iPhone 14/15 safe area insets (portrait)
+const SAFE_AREA_TOP = 59; // Dynamic Island
+const SAFE_AREA_BOTTOM = 34; // Home Indicator
+
 export default function PhoneFrame({ children }: { children: React.ReactNode }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -74,7 +78,21 @@ export default function PhoneFrame({ children }: { children: React.ReactNode }) 
               contain: 'paint',
             }}
           >
-            {children}
+            {/* Safe area: game content is constrained here.
+                contain:paint makes this the containing block for
+                position:fixed elements inside the game. */}
+            <div
+              className="absolute overflow-hidden"
+              style={{
+                top: SAFE_AREA_TOP,
+                left: 0,
+                right: 0,
+                bottom: SAFE_AREA_BOTTOM,
+                contain: 'paint',
+              }}
+            >
+              {children}
+            </div>
           </div>
 
           {/* Dynamic Island */}

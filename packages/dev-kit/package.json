@@ -1,6 +1,6 @@
 {
   "name": "@littlepartytime/dev-kit",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "description": "Development toolkit CLI for Little Party Time game developers",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
