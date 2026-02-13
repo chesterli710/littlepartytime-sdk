@@ -99,6 +99,8 @@ git push
 
 ## Step 4: 发布 npm 包
 
+> **注意：** npm publish 需要 Touch ID 验证，Claude 无法自动完成。请在完成构建和 dry-run 检查后，由开发者手动执行发布。
+
 ```bash
 cd packages/<package>
 
@@ -108,8 +110,8 @@ npm run build
 # 检查产物
 npm pack --dry-run
 
-# 发布（需要 authenticator OTP）
-npm publish --otp=<code>
+# 发布（需要 Touch ID 验证，手动执行）
+npm publish
 
 # 验证发布成功
 npm view <package-name> versions --json
