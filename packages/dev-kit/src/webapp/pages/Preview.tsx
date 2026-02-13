@@ -160,10 +160,28 @@ export default function Preview() {
     }
   }, [playerCount, playerIndex]);
 
+  // Resizable split panel
+  const [splitRatio, setSplitRatio] = useState(0.6); // left column gets 60%
+  const panelRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!dragging.current || !panelRef.current) return;
+      const rect = panelRef.current.getBoundingClientRect();
+      const ratio = (e.clientX - rect.left) / rect.width;
+      setSplitRatio(Math.min(0.8, Math.max(0.2, ratio)));
+    };
+    const onUp = () => { dragging.current = false; document.body.style.cursor = ''; document.body.style.userSelect = ''; };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, []);
+
   return (
     <div className="flex gap-4 h-[calc(100vh-80px)]">
-      {/* Renderer — constrain to phone width so it doesn't hog space */}
-      <div className="shrink-0 h-full">
+      {/* Renderer — fixed width matching the phone body */}
+      <div className="shrink-0 h-full" style={{ width: 420 }}>
         <PhoneFrame>
           {GameRenderer && platform && viewState ? (
             <GameRenderer platform={platform} state={viewState} />
@@ -175,10 +193,10 @@ export default function Preview() {
         </PhoneFrame>
       </div>
 
-      {/* Control Panel — fills remaining width, two-column grid */}
-      <div className="flex-1 min-w-0 grid grid-cols-2 gap-4 overflow-auto">
+      {/* Control Panel — fills remaining width, resizable two-column */}
+      <div ref={panelRef} className="flex-1 min-w-0 flex h-full">
         {/* Left column: Players & Controls */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 overflow-auto pr-1" style={{ width: `${splitRatio * 100}%` }}>
           {/* Player Count */}
           <div className="bg-zinc-900 rounded-lg p-3">
             <h3 className="text-sm font-bold text-zinc-400 mb-2">Player Count</h3>
@@ -200,9 +218,10 @@ export default function Preview() {
                 const isActive = i === playerIndex;
                 const hue = (i * 137) % 360; // deterministic color per player
                 const playerState = fullState?.players?.find((ps: any) => ps.id === p.id);
-                const extraEntries = playerState
-                  ? Object.entries(playerState).filter(([k]) => k !== 'id')
-                  : [];
+                const ROLE_KEYS = ['role', 'character', 'team', 'class', 'job', 'faction', 'type'];
+                const roleEntry = playerState
+                  ? Object.entries(playerState).find(([k]) => ROLE_KEYS.includes(k.toLowerCase()))
+                  : undefined;
                 return (
                   <button
                     key={p.id}
@@ -227,9 +246,9 @@ export default function Preview() {
                           <span className="text-[10px] text-amber-400 shrink-0">HOST</span>
                         )}
                       </div>
-                      {extraEntries.length > 0 && (
+                      {roleEntry && (
                         <div className="text-[10px] text-zinc-500 truncate">
-                          {extraEntries.map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : String(v)}`).join(' · ')}
+                          {String(roleEntry[1])}
                         </div>
                       )}
                     </div>
@@ -268,8 +287,16 @@ export default function Preview() {
           )}
         </div>
 
+        {/* Drag handle */}
+        <div
+          className="shrink-0 w-2 cursor-col-resize flex items-center justify-center group"
+          onMouseDown={() => { dragging.current = true; document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none'; }}
+        >
+          <div className="w-0.5 h-8 bg-zinc-700 rounded group-hover:bg-zinc-500 transition-colors" />
+        </div>
+
         {/* Right column: State & Logs */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 overflow-auto pl-1" style={{ width: `${(1 - splitRatio) * 100}%` }}>
           {/* State Editor */}
           <div className="bg-zinc-900 rounded-lg p-3 flex-1 flex flex-col min-h-0">
             <h3 className="text-sm font-bold text-zinc-400 mb-2">Game State (Full)</h3>
