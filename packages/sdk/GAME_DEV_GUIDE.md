@@ -749,6 +749,46 @@ export default function GameRenderer({ platform, state }: GameRendererProps) {
 | `off(event, handler)` | Removes an event listener |
 | `reportResult(result)` | Reports game results (called by platform, not games) |
 | `getAssetUrl(path)` | Returns the runtime URL for a custom asset (e.g., `"cards/king.png"` → CDN URL) |
+| `getDeviceCapabilities()` | Returns `{ haptics: boolean, motion: boolean }` indicating available device features |
+| `haptic(type, option?)` | Triggers haptic feedback. `type`: `'impact'` / `'notification'` / `'selection'`. Silent no-op if unsupported |
+| `onShake(handler)` | Listens for device shake events. Returns an unsubscribe function |
+| `onTilt(handler)` | Streams device tilt data (`{ alpha, beta, gamma }`) at ~60fps. Returns an unsubscribe function |
+
+#### Device Capabilities & Graceful Degradation
+
+Games can query runtime capabilities via `getDeviceCapabilities()` and provide fallback UI:
+
+```tsx
+const caps = platform.getDeviceCapabilities();
+
+// Shake: use motion sensor or fall back to a button
+useEffect(() => {
+  if (!caps.motion) return;
+  return platform.onShake(() => {
+    platform.haptic('impact', 'heavy');
+    platform.send({ type: 'ROLL_DICE' });
+  });
+}, [platform, caps.motion]);
+
+// Tilt: stream orientation data for motion-controlled games
+useEffect(() => {
+  if (!caps.motion) return;
+  return platform.onTilt((tilt) => {
+    // tilt.beta = front/back (-180~180), tilt.gamma = left/right (-90~90)
+    updateBallPosition(tilt.gamma, tilt.beta);
+  });
+}, [platform, caps.motion]);
+
+// Haptic feedback on user action (silent no-op if unsupported)
+platform.haptic('impact', 'light');
+```
+
+| Environment | Haptics | Motion (Shake/Tilt) |
+|---|---|---|
+| Native App (iOS/Android) | Full support (Impact/Notification/Selection) | Full support |
+| Web (Android Chrome) | Basic vibration | Supported |
+| Web (iOS Safari) | Not supported (silent) | Requires permission (handled by platform) |
+| Dev-kit preview | Not supported (silent) | Not supported |
 
 ### Events the renderer should listen for
 

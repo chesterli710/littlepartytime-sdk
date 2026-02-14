@@ -53,6 +53,10 @@ export default function Play() {
     },
     reportResult: () => {},
     getAssetUrl: (assetPath: string) => `/assets/${assetPath}`,
+    getDeviceCapabilities: () => ({ haptics: false, motion: false }),
+    haptic: () => {},
+    onShake: () => () => {},
+    onTilt: () => () => {},
   } : null;
 
   if (!joined) {

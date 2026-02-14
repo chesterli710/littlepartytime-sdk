@@ -122,6 +122,10 @@ export default function Preview() {
         console.log('Game result reported:', result);
       },
       getAssetUrl: (assetPath: string) => `/assets/${assetPath}`,
+      getDeviceCapabilities: () => ({ haptics: false, motion: false }),
+      haptic: () => {},
+      onShake: () => () => {},
+      onTilt: () => () => {},
     };
   }, [engine]);
 
