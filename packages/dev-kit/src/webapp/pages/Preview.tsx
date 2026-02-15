@@ -11,11 +11,12 @@ const btnAmber: React.CSSProperties = { background: '#d97706', color: '#fff', bo
 const btnZinc: React.CSSProperties = { background: '#3f3f46', color: '#fff', border: 'none', padding: '4px 12px', borderRadius: 4, fontSize: 13, cursor: 'pointer', width: '100%' };
 
 export default function Preview() {
-  const [playerCount, setPlayerCount] = useState(3);
+  const [playerCount, setPlayerCount] = useState<number | null>(null);
   const [playerIndex, setPlayerIndex] = useState(0);
   const [actions, setActions] = useState<any[]>([]);
   const [GameRenderer, setGameRenderer] = useState<React.ComponentType<any> | null>(null);
   const [engine, setEngine] = useState<any>(null);
+  const [config, setConfig] = useState<{ minPlayers?: number; maxPlayers?: number } | null>(null);
   const [fullState, setFullState] = useState<any>(null);
   const [viewState, setViewState] = useState<any>(null);
   const [gameOver, setGameOver] = useState(false);
@@ -31,6 +32,7 @@ export default function Preview() {
 
   // Generate mock players
   const mockPlayers = useMemo(() => {
+    if (playerCount === null) return [];
     return Array.from({ length: playerCount }, (_, i) => ({
       id: `player-${i + 1}`,
       nickname: PLAYER_NAMES[i] || `Player ${i + 1}`,
@@ -42,15 +44,25 @@ export default function Preview() {
   const mockPlayersRef = useRef(mockPlayers);
   mockPlayersRef.current = mockPlayers;
 
-  // Load renderer and engine dynamically
+  const minPlayers = config?.minPlayers ?? 2;
+  const maxPlayers = config?.maxPlayers ?? 32;
+
+  // Load renderer, engine, and config dynamically
   useEffect(() => {
     import('/src/index.ts').then((mod) => {
       setGameRenderer(() => mod.Renderer || mod.default);
       if (mod.engine) {
         setEngine(mod.engine);
       }
+      if (mod.config) {
+        setConfig(mod.config);
+        setPlayerCount(mod.config.minPlayers ?? 3);
+      } else {
+        setPlayerCount(3);
+      }
     }).catch((err) => {
       console.error('Failed to load game module:', err);
+      setPlayerCount(3);
       // Fallback: try loading renderer directly
       import('/src/renderer.tsx').then((mod) => {
         setGameRenderer(() => mod.default || mod.Renderer);
@@ -62,7 +74,7 @@ export default function Preview() {
 
   // Initialize game when engine loads or player count changes
   useEffect(() => {
-    if (!engine) return;
+    if (!engine || mockPlayers.length === 0) return;
     const initialState = engine.init(mockPlayers);
     setFullState(initialState);
     setGameOver(false);
@@ -166,7 +178,7 @@ export default function Preview() {
 
   // Clamp playerIndex when playerCount decreases
   useEffect(() => {
-    if (playerIndex >= playerCount) {
+    if (playerCount !== null && playerIndex >= playerCount) {
       setPlayerIndex(0);
     }
   }, [playerCount, playerIndex]);
@@ -213,10 +225,10 @@ export default function Preview() {
             <h3 style={label}>Player Count</h3>
             <input
               type="number"
-              min={2}
-              max={32}
-              value={playerCount}
-              onChange={(e) => setPlayerCount(Math.max(2, Math.min(32, Number(e.target.value))))}
+              min={minPlayers}
+              max={maxPlayers}
+              value={playerCount ?? ''}
+              onChange={(e) => setPlayerCount(Math.max(minPlayers, Math.min(maxPlayers, Number(e.target.value))))}
               className="dk-input"
               style={inputBase}
             />
