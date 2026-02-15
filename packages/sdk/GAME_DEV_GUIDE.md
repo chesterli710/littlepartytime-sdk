@@ -253,12 +253,12 @@ export default function GameRenderer({ platform, state }: GameRendererProps) {
     [platform]
   );
 
-  // Render game UI
+  // Render game UI — use inline styles + CSS variables for consistent styling
   return (
-    <div>
+    <div style={{ color: "var(--text-primary)" }}>
       {/* Your game UI here */}
-      {/* Use Tailwind CSS classes - the platform provides Tailwind */}
-      {/* Use the design tokens from the platform: bg-bg-primary, text-accent, etc. */}
+      {/* Use inline styles with CSS variables from the platform design tokens */}
+      {/* See "Renderer Styling Guide" section below for details */}
     </div>
   );
 }
@@ -724,7 +724,7 @@ export default function GameRenderer({ platform, state }: GameRendererProps) {
 | Approach | When to Use | How |
 |----------|-------------|-----|
 | **Inline in bundle** | Tiny assets (< 4KB) | Vite automatically inlines as data URLs |
-| **CSS/SVG** | UI elements, icons | Tailwind CSS utilities or inline SVG components |
+| **CSS/SVG** | UI elements, icons | Inline styles, `<style>` injection, or inline SVG components |
 | **Emoji/Unicode** | Simple visual indicators | Unicode characters directly in JSX |
 
 > **Tip:** Use `platform.getAssetUrl()` for assets 100KB+ instead of inlining them into the bundle.
@@ -822,30 +822,83 @@ interface PlayerState {
 
 ### Renderer Rules
 1. **React functional component**: Use hooks, not class components.
-2. **Tailwind CSS only**: Use the platform's design tokens for consistent styling.
+2. **Inline styles + `<style>` injection**: Do NOT use Tailwind CSS (see "Renderer Styling Guide" below). Use inline styles with CSS variables for layout and theming. Use `<style>` injection for animations and pseudo-classes.
 3. **Mobile-first**: Design for phone screens (375px width). The platform is a PWA.
 4. **No direct socket access**: Only use `platform.send()` and `platform.on()`.
 5. **Chinese UI text**: The platform targets Chinese-speaking users.
 6. **Responsive touch targets**: Buttons should be at least 44x44px for mobile.
 
+### Renderer Styling Guide
+
+**Do NOT use Tailwind CSS in game renderers.** The production platform pre-compiles Tailwind at build time and only scans the platform's own source code — game bundles are loaded dynamically at runtime, so Tailwind utility classes (especially arbitrary values like `w-[280px]`, `text-[18px]`) will silently fail in production even though they work in the dev-kit.
+
+Use **inline styles** as the primary styling method, with **`<style>` injection** for features that inline styles can't express (animations, pseudo-classes, hover states).
+
+#### Inline styles (primary)
+
+```tsx
+// ✅ Use inline styles with CSS variables
+<div style={{ width: 280, height: 60, fontSize: 18, color: "var(--text-primary)" }}>
+
+// ❌ Do NOT use Tailwind classes
+<div className="w-[280px] h-[60px] text-[18px] text-text-primary">
+```
+
+#### `<style>` injection (for animations and pseudo-classes)
+
+```tsx
+const GameStyles = () => (
+  <style>{`
+    @keyframes card-flip {
+      0% { transform: rotateY(0deg); }
+      50% { transform: rotateY(90deg); scale: 1.1; }
+      100% { transform: rotateY(180deg); }
+    }
+    .my-game-card-flip { animation: card-flip 0.6s ease-in-out; }
+    .my-game-btn:disabled { opacity: 0.4; }
+    .my-game-input:focus { outline: none; border-color: var(--accent-primary); }
+  `}</style>
+);
+
+export default function GameRenderer({ platform, state }: GameRendererProps) {
+  return (
+    <div>
+      <GameStyles />
+      <div className="my-game-card-flip" style={{ width: 120, height: 180 }}>
+        {/* card content */}
+      </div>
+    </div>
+  );
+}
+```
+
+> **Tip:** Prefix your CSS class names with your game name (e.g., `my-game-`) to avoid conflicts when multiple games coexist.
+
+#### Why this approach
+
+- **Zero dependencies**: No CSS framework needed
+- **Consistent across environments**: Inline styles work identically in dev-kit and production
+- **No conflicts**: Inline styles are naturally isolated; multiple games won't interfere
+- **More flexible animations**: Native CSS keyframes support multi-stage animations, cubic-bezier curves, and staggered delays — more powerful than Tailwind's preset `animate-*` classes
+
 ### Design Token Reference
 
-Use these CSS variables / Tailwind classes for consistent styling:
+Use these CSS variables in your inline styles for consistent theming:
 
-| Purpose | CSS Variable | Tailwind Class |
-|---------|-------------|----------------|
-| Page background | `--bg-primary` | `bg-bg-primary` |
-| Card background | `--bg-secondary` | `bg-bg-secondary` |
-| Elevated surface | `--bg-tertiary` | `bg-bg-tertiary` |
-| Primary accent | `--accent-primary` | `text-accent` / `bg-accent` |
-| Primary text | `--text-primary` | `text-text-primary` |
-| Secondary text | `--text-secondary` | `text-text-secondary` |
-| Muted text | `--text-tertiary` | `text-text-tertiary` |
-| Border | `--border-default` | `border-border-default` |
-| Success | `--success` | `text-success` |
-| Error | `--error` | `text-error` |
-| Display font | `--font-display` | `font-display` |
-| Body font | `--font-body` | `font-body` |
+| Purpose | CSS Variable | Inline Style Example |
+|---------|-------------|---------------------|
+| Page background | `--bg-primary` | `background: "var(--bg-primary)"` |
+| Card background | `--bg-secondary` | `background: "var(--bg-secondary)"` |
+| Elevated surface | `--bg-tertiary` | `background: "var(--bg-tertiary)"` |
+| Primary accent | `--accent-primary` | `color: "var(--accent-primary)"` |
+| Primary text | `--text-primary` | `color: "var(--text-primary)"` |
+| Secondary text | `--text-secondary` | `color: "var(--text-secondary)"` |
+| Muted text | `--text-tertiary` | `color: "var(--text-tertiary)"` |
+| Border | `--border-default` | `border: "1px solid var(--border-default)"` |
+| Success | `--success` | `color: "var(--success)"` |
+| Error | `--error` | `color: "var(--error)"` |
+| Display font | `--font-display` | `fontFamily: "var(--font-display)"` |
+| Body font | `--font-body` | `fontFamily: "var(--font-body)"` |
 
 ## Platform Runtime Constraints
 

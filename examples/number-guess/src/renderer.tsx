@@ -23,6 +23,25 @@ interface PlayerInfo {
   nickname?: string;
 }
 
+/** Injected <style> for animations and pseudo-classes that can't be expressed as inline styles */
+const GameStyles = () => (
+  <style>{`
+    @keyframes lpt-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    @keyframes lpt-fade-in-up {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .lpt-pulse { animation: lpt-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    .lpt-fade-in-up { animation: lpt-fade-in-up 0.3s ease-out; }
+    .lpt-card-felt { background: var(--bg-secondary); }
+    .lpt-btn:disabled { opacity: 0.4; }
+    .lpt-input:focus { outline: none; border-color: var(--accent-primary); }
+  `}</style>
+);
+
 export default function NumberGuessRenderer({
   platform,
   state: initialState,
@@ -71,51 +90,61 @@ export default function NumberGuessRenderer({
   if (isEnded) {
     const loserName = data.loserId ? findName(data.loserId) : "???";
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-5 px-4">
-        <div className="text-5xl">&#127942;</div>
-        <p className="font-display text-2xl font-bold text-accent">
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", gap: 20, padding: "0 16px" }}>
+        <GameStyles />
+        <div style={{ fontSize: 48 }}>&#127942;</div>
+        <p style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 700, color: "var(--accent-primary)" }}>
           游戏结束
         </p>
-        <div className="card-felt rounded-2xl border border-border-default p-5 text-center w-full max-w-xs">
-          <p className="text-text-secondary text-sm mb-2">
+        <div className="lpt-card-felt" style={{ borderRadius: 16, border: "1px solid var(--border-default)", padding: 20, textAlign: "center", width: "100%", maxWidth: 320 }}>
+          <p style={{ color: "var(--text-secondary)", fontSize: 14, marginBottom: 8 }}>
             秘密数字是
           </p>
-          <p className="text-4xl font-bold font-mono text-accent mb-3">
+          <p style={{ fontSize: 36, fontWeight: 700, fontFamily: "monospace", color: "var(--accent-primary)", marginBottom: 12 }}>
             {data.secretNumber}
           </p>
-          <p className="text-text-secondary text-sm">
-            <span className="text-error font-semibold">{loserName}</span>{" "}
+          <p style={{ color: "var(--text-secondary)", fontSize: 14 }}>
+            <span style={{ color: "var(--error)", fontWeight: 600 }}>{loserName}</span>{" "}
             猜中了数字，被淘汰！
           </p>
         </div>
-        <div className="w-full max-w-xs space-y-2 mt-2">
-          <p className="text-xs text-text-tertiary text-center tracking-wider uppercase">
+        <div style={{ width: "100%", maxWidth: 320, marginTop: 8 }}>
+          <p style={{ fontSize: 12, color: "var(--text-tertiary)", textAlign: "center", letterSpacing: "0.05em", textTransform: "uppercase" }}>
             结果
           </p>
-          {playerList.map((p) => (
-            <div
-              key={p.id}
-              className={`flex items-center justify-between px-4 py-2.5 rounded-xl border ${
-                p.id === data.loserId
-                  ? "border-error/30 bg-error/5"
-                  : "border-accent/30 bg-accent/5"
-              }`}
-            >
-              <span className="text-sm text-text-primary">
-                {findName(p.id)}
-                {p.id === me.id && (
-                  <span className="text-text-tertiary ml-1">(我)</span>
-                )}
-              </span>
-              <span
-                className={`text-xs font-semibold ${
-                  p.id === data.loserId ? "text-error" : "text-accent"
-                }`}
+          <div style={{ marginTop: 8 }}>
+            {playerList.map((p) => (
+              <div
+                key={p.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "10px 16px",
+                  borderRadius: 12,
+                  border: `1px solid ${p.id === data.loserId ? "rgba(var(--error-rgb, 239, 68, 68), 0.3)" : "rgba(var(--accent-rgb, 245, 158, 11), 0.3)"}`,
+                  background: p.id === data.loserId ? "rgba(var(--error-rgb, 239, 68, 68), 0.05)" : "rgba(var(--accent-rgb, 245, 158, 11), 0.05)",
+                  marginBottom: 8,
+                }}
               >
-                {p.id === data.loserId ? "淘汰" : "存活"}
-              </span>
-            </div>
-          ))}
+                <span style={{ fontSize: 14, color: "var(--text-primary)" }}>
+                  {findName(p.id)}
+                  {p.id === me.id && (
+                    <span style={{ color: "var(--text-tertiary)", marginLeft: 4 }}>(我)</span>
+                  )}
+                </span>
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: p.id === data.loserId ? "var(--error)" : "var(--accent-primary)",
+                  }}
+                >
+                  {p.id === data.loserId ? "淘汰" : "存活"}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -123,18 +152,19 @@ export default function NumberGuessRenderer({
 
   // ---- Playing Screen ----
   return (
-    <div className="flex flex-col items-center gap-5 pt-6 px-4 pb-8">
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, paddingTop: 24, paddingLeft: 16, paddingRight: 16, paddingBottom: 32 }}>
+      <GameStyles />
       {/* Range display */}
-      <div className="text-center">
-        <p className="text-xs text-text-tertiary tracking-wider uppercase mb-2">
+      <div style={{ textAlign: "center" }}>
+        <p style={{ fontSize: 12, color: "var(--text-tertiary)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 8 }}>
           猜数范围
         </p>
-        <div className="flex items-center gap-3">
-          <span className="text-3xl font-bold font-mono text-text-primary">
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ fontSize: 30, fontWeight: 700, fontFamily: "monospace", color: "var(--text-primary)" }}>
             {data.low}
           </span>
-          <span className="text-text-tertiary">~</span>
-          <span className="text-3xl font-bold font-mono text-text-primary">
+          <span style={{ color: "var(--text-tertiary)" }}>~</span>
+          <span style={{ fontSize: 30, fontWeight: 700, fontFamily: "monospace", color: "var(--text-primary)" }}>
             {data.high}
           </span>
         </div>
@@ -142,22 +172,20 @@ export default function NumberGuessRenderer({
 
       {/* Last guess hint */}
       {data.lastGuess && (
-        <div className="card-felt rounded-xl border border-border-default px-4 py-3 text-center w-full max-w-xs">
-          <p className="text-sm text-text-secondary">
-            <span className="text-text-primary font-semibold">
+        <div className="lpt-card-felt" style={{ borderRadius: 12, border: "1px solid var(--border-default)", padding: "12px 16px", textAlign: "center", width: "100%", maxWidth: 320 }}>
+          <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
+            <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>
               {data.lastGuess.playerName || findName(data.lastGuess.playerId)}
             </span>{" "}
             猜了{" "}
-            <span className="font-mono font-bold text-accent">
+            <span style={{ fontFamily: "monospace", fontWeight: 700, color: "var(--accent-primary)" }}>
               {data.lastGuess.guess}
             </span>{" "}
             —{" "}
             <span
-              className={
-                data.lastGuess.hint === "high"
-                  ? "text-error"
-                  : "text-success"
-              }
+              style={{
+                color: data.lastGuess.hint === "high" ? "var(--error)" : "var(--success)",
+              }}
             >
               {data.lastGuess.hint === "high" ? "太大了 ↓" : "太小了 ↑"}
             </span>
@@ -166,16 +194,16 @@ export default function NumberGuessRenderer({
       )}
 
       {/* Player turn indicator */}
-      <div className="w-full max-w-xs">
-        <div className="flex items-center gap-2 justify-center py-2">
+      <div style={{ width: "100%", maxWidth: 320 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", padding: "8px 0" }}>
           {isMyTurn ? (
-            <p className="text-accent font-semibold text-sm animate-pulse">
+            <p className="lpt-pulse" style={{ color: "var(--accent-primary)", fontWeight: 600, fontSize: 14 }}>
               轮到你猜了！
             </p>
           ) : (
-            <p className="text-text-tertiary text-sm">
+            <p style={{ color: "var(--text-tertiary)", fontSize: 14 }}>
               等待{" "}
-              <span className="text-text-primary font-medium">
+              <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>
                 {findName(currentPlayer?.id ?? "")}
               </span>{" "}
               猜数...
@@ -186,7 +214,7 @@ export default function NumberGuessRenderer({
 
       {/* Input area */}
       {isMyTurn && !justGuessed && (
-        <div className="flex gap-2 w-full max-w-xs animate-fade-in-up">
+        <div className="lpt-fade-in-up" style={{ display: "flex", gap: 8, width: "100%", maxWidth: 320 }}>
           <input
             type="number"
             inputMode="numeric"
@@ -195,7 +223,20 @@ export default function NumberGuessRenderer({
             min={data.low}
             max={data.high}
             placeholder={`${data.low} ~ ${data.high}`}
-            className="flex-1 h-12 px-4 rounded-xl bg-bg-secondary border border-border-default text-text-primary text-center text-lg font-mono transition-all duration-200"
+            className="lpt-input"
+            style={{
+              flex: 1,
+              height: 48,
+              padding: "0 16px",
+              borderRadius: 12,
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border-default)",
+              color: "var(--text-primary)",
+              textAlign: "center",
+              fontSize: 18,
+              fontFamily: "monospace",
+              transition: "all 0.2s",
+            }}
             onKeyDown={(e) => e.key === "Enter" && handleGuess()}
             autoFocus
           />
@@ -206,7 +247,18 @@ export default function NumberGuessRenderer({
               parseInt(inputValue) < data.low ||
               parseInt(inputValue) > data.high
             }
-            className="btn-press h-12 px-5 rounded-xl bg-accent text-text-on-accent font-semibold transition-all disabled:opacity-40"
+            className="lpt-btn"
+            style={{
+              height: 48,
+              padding: "0 20px",
+              borderRadius: 12,
+              background: "var(--accent-primary)",
+              color: "var(--text-on-accent, #fff)",
+              fontWeight: 600,
+              border: "none",
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
           >
             猜！
           </button>
@@ -214,34 +266,40 @@ export default function NumberGuessRenderer({
       )}
 
       {justGuessed && (
-        <p className="text-text-tertiary text-sm animate-pulse">
+        <p className="lpt-pulse" style={{ color: "var(--text-tertiary)", fontSize: 14 }}>
           提交中...
         </p>
       )}
 
       {/* Player list */}
-      <div className="w-full max-w-xs mt-2">
-        <p className="text-xs text-text-tertiary tracking-wider uppercase mb-2">
+      <div style={{ width: "100%", maxWidth: 320, marginTop: 8 }}>
+        <p style={{ fontSize: 12, color: "var(--text-tertiary)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 8 }}>
           玩家
         </p>
-        <div className="space-y-1.5">
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {playerList.map((p, i) => (
             <div
               key={p.id}
-              className={`flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                i === data.currentPlayerIndex
-                  ? "bg-accent/10 border border-accent/20"
-                  : "bg-bg-secondary/50"
-              }`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "8px 12px",
+                borderRadius: 8,
+                transition: "background 0.2s",
+                ...(i === data.currentPlayerIndex
+                  ? { background: "rgba(var(--accent-rgb, 245, 158, 11), 0.1)", border: "1px solid rgba(var(--accent-rgb, 245, 158, 11), 0.2)" }
+                  : { background: "rgba(var(--bg-secondary-rgb, 39, 39, 42), 0.5)", border: "1px solid transparent" }),
+              }}
             >
-              <span className="text-sm text-text-primary">
+              <span style={{ fontSize: 14, color: "var(--text-primary)" }}>
                 {findName(p.id)}
                 {p.id === me.id && (
-                  <span className="text-text-tertiary ml-1">(我)</span>
+                  <span style={{ color: "var(--text-tertiary)", marginLeft: 4 }}>(我)</span>
                 )}
               </span>
               {i === data.currentPlayerIndex && (
-                <span className="text-[10px] text-accent font-medium">
+                <span style={{ fontSize: 10, color: "var(--accent-primary)", fontWeight: 500 }}>
                   当前
                 </span>
               )}

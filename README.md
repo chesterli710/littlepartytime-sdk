@@ -105,7 +105,7 @@ The Preview page runs the engine in the browser — `platform.send()` calls `eng
 
 1. **Create game**: `npx create-littlepartytime-game my-game`
 2. **Implement engine**: Pure functions, no side effects
-3. **Build renderer**: React component with Tailwind CSS
+3. **Build renderer**: React component with inline styles (no Tailwind — see [styling guide](./packages/sdk/GAME_DEV_GUIDE.md#renderer-styling-guide))
 4. **Local preview**: `npm run dev` to test in browser immediately
 5. **Write tests**: `GameTester` for unit tests, `GameSimulator` for simulation, `GamePreview` for Playwright E2E
 6. **Package**: `npm run pack` creates a `.zip` file
