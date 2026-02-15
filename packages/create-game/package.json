@@ -1,6 +1,6 @@
 {
   "name": "create-littlepartytime-game",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Scaffold a new game project for Little Party Time platform",
   "bin": {
     "create-littlepartytime-game": "./dist/index.js"

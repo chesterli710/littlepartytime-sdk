@@ -982,6 +982,101 @@ Renderer receives "stateUpdate" event with filtered state
 React re-renders with new state
 ```
 
+## Game Settlement Lifecycle
+
+When `isGameOver()` returns `true`, the platform **immediately** takes over: it sends `game:result` to all clients, transitions to the settlement screen, and **unloads the game renderer**. This happens in the same tick as the final `game:state` broadcast:
+
+```
+engine.handleAction(state, playerId, action) → newState
+broadcastPlayerViews(newState)          ← last game frame sent
+engine.isGameOver(newState) → true
+handleGameEnd()                         ← platform takes over, renderer unloaded
+```
+
+If your game needs an in-game settlement screen (animations, rankings, replay, etc.), you **must not** let `isGameOver()` return `true` until that screen is done.
+
+### Two-Phase Settlement Pattern
+
+Split game ending into two phases:
+
+```
+playing → (winner decided) → settlement → (player confirms or timer expires) → finished
+                               ↑                                                  ↑
+                        isGameOver = false                                 isGameOver = true
+                        game renderer shows                                platform takes over
+                        its own result screen
+```
+
+#### Engine Implementation
+
+```typescript
+handleAction(state: GameState, playerId: string, action: GameAction): GameState {
+  const data = state.data as MyGameData;
+
+  // 1. Normal gameplay — when winner is decided, enter settlement
+  if (state.phase === "playing" && winnerDecided(data)) {
+    return {
+      ...state,
+      phase: "settlement",
+      data: { ...data, rankings: computeRankings(data) },
+    };
+  }
+
+  // 2. Settlement — wait for confirm action, then finish
+  if (state.phase === "settlement" && action.type === "CONFIRM_RESULT") {
+    return { ...state, phase: "finished" };
+  }
+
+  return state;
+},
+
+isGameOver(state: GameState): boolean {
+  return state.phase === "finished";   // NOT "settlement"!
+},
+
+getPlayerView(state: GameState, playerId: string): Partial<GameState> {
+  if (state.phase === "settlement") {
+    // Return rankings / stats for the in-game result screen
+    return {
+      ...state,
+      data: { rankings: (state.data as MyGameData).rankings },
+    };
+  }
+  // ...
+},
+```
+
+#### Renderer Implementation
+
+```tsx
+export default function GameRenderer({ platform, state }: GameRendererProps) {
+  if (state.phase === "settlement") {
+    return (
+      <div>
+        {/* Show your in-game result screen here */}
+        <Rankings data={state.data.rankings} />
+        <button onClick={() => platform.send({ type: "CONFIRM_RESULT" })}>
+          确认
+        </button>
+      </div>
+    );
+  }
+  // ... normal gameplay UI
+}
+```
+
+### Common Mistakes
+
+| Mistake | Consequence |
+|---------|------------|
+| `isGameOver()` returns `true` in `settlement` phase | In-game result screen is skipped — platform unloads the renderer immediately |
+| No `settlement` phase; jumping straight from `playing` to `finished` | Players never see the in-game result animation / ranking |
+| Calling `platform.reportResult()` from the renderer | No-op — settlement is driven entirely by the server via `isGameOver` + `getResult` |
+
+### One-Liner Rule
+
+> **`isGameOver()` is the platform takeover switch. Do not return `true` until your in-game result screen is done.**
+
 ## Complete Example: Number Guessing Game
 
 See the [`examples/number-guess`](../../examples/number-guess) directory for a complete working example.

@@ -14,9 +14,20 @@ const engine: GameEngine = {
 
   handleAction(state: GameState, playerId: string, action: GameAction): GameState {
     // TODO: Implement your game logic
+    // When a winner is decided, transition to "settlement" (not "ended") so the
+    // renderer can show an in-game result screen first:
+    //   return { ...state, phase: "settlement" };
+    // Then handle a confirm action to finish:
+    //   if (state.phase === "settlement" && action.type === "CONFIRM_RESULT") {
+    //     return { ...state, phase: "ended" };
+    //   }
     return state;
   },
 
+  // IMPORTANT: returning true immediately unloads the renderer and shows the
+  // platform settlement screen. If you need an in-game result screen, use a
+  // "settlement" phase and only return true when that screen is done.
+  // See "Game Settlement Lifecycle" in GAME_DEV_GUIDE.md.
   isGameOver(state: GameState): boolean {
     return state.phase === "ended";
   },

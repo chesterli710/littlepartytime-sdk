@@ -37,6 +37,16 @@ export interface GameConfig {
 export interface GameEngine {
   init(players: Player[], options?: Record<string, unknown>): GameState;
   handleAction(state: GameState, playerId: string, action: GameAction): GameState;
+  /**
+   * Called after every handleAction. When this returns true, the platform
+   * immediately sends game:result, unloads the renderer, and shows the
+   * platform settlement screen.
+   *
+   * If your game has an in-game result screen (animations, rankings, etc.),
+   * keep returning false during that phase and only return true when the
+   * in-game result screen is done. See "Game Settlement Lifecycle" in
+   * GAME_DEV_GUIDE.md.
+   */
   isGameOver(state: GameState): boolean;
   getResult(state: GameState): GameResult;
   getPlayerView(state: GameState, playerId: string): Partial<GameState>;
