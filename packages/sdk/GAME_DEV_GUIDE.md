@@ -897,8 +897,39 @@ Use these CSS variables in your inline styles for consistent theming:
 | Border | `--border-default` | `border: "1px solid var(--border-default)"` |
 | Success | `--success` | `color: "var(--success)"` |
 | Error | `--error` | `color: "var(--error)"` |
+| Body font (sans-serif) | `--font-body` | `fontFamily: "var(--font-body)"` |
+| Serif font | `--font-serif` | `fontFamily: "var(--font-serif)"` |
 | Display font | `--font-display` | `fontFamily: "var(--font-display)"` |
-| Body font | `--font-body` | `fontFamily: "var(--font-body)"` |
+
+### Platform Fonts
+
+The platform self-hosts **Noto Sans SC** (sans-serif) and **Noto Serif SC** (serif) via `next/font/google`, available to all games inside the sandbox container.
+
+| CSS Variable | Font | Type |
+|---|---|---|
+| `--font-body` | Noto Sans SC | sans-serif (default — inherited automatically) |
+| `--font-serif` | Noto Serif SC | serif |
+| `--font-display` | Comfortaa | display / title |
+
+Games inherit `--font-body` (Noto Sans SC) by default — no action needed for sans-serif text.
+
+To use the serif font:
+
+```tsx
+<p style={{ fontFamily: "var(--font-serif)" }}>衬线体文本</p>
+```
+
+**Do NOT reference fonts by name.** The platform uses hashed `font-family` names internally, so literal font names will not match the self-hosted font files:
+
+```css
+/* ✅ Works */
+font-family: var(--font-body);
+font-family: var(--font-serif);
+
+/* ❌ Does NOT work — won't match the self-hosted font */
+font-family: 'Noto Sans SC', sans-serif;
+font-family: 'Noto Serif SC', serif;
+```
 
 ## Platform Runtime Constraints
 
