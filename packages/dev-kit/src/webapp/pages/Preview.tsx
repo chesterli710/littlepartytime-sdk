@@ -3,6 +3,13 @@ import PhoneFrame from '../components/PhoneFrame';
 
 const PLAYER_NAMES = ['Alice', 'Bob', 'Carol', 'Dave', 'Eve', 'Frank', 'Grace', 'Heidi'];
 
+/* ── shared inline-style helpers ── */
+const card: React.CSSProperties = { background: '#18181b', borderRadius: 8, padding: 12 };
+const label: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: '#a1a1aa', marginBottom: 8 };
+const inputBase: React.CSSProperties = { width: '100%', background: '#27272a', border: '1px solid #3f3f46', borderRadius: 4, padding: '4px 8px', fontSize: 13, color: '#e5e5e5' };
+const btnAmber: React.CSSProperties = { background: '#d97706', color: '#fff', border: 'none', padding: '4px 12px', borderRadius: 4, fontSize: 13, cursor: 'pointer' };
+const btnZinc: React.CSSProperties = { background: '#3f3f46', color: '#fff', border: 'none', padding: '4px 12px', borderRadius: 4, fontSize: 13, cursor: 'pointer', width: '100%' };
+
 export default function Preview() {
   const [playerCount, setPlayerCount] = useState(3);
   const [playerIndex, setPlayerIndex] = useState(0);
@@ -183,14 +190,14 @@ export default function Preview() {
   }, []);
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-80px)]">
+    <div style={{ display: 'flex', gap: 16, height: 'calc(100vh - 80px)' }}>
       {/* Renderer — half the screen width */}
-      <div className="h-full" style={{ width: '50%' }}>
+      <div style={{ width: '50%', height: '100%' }}>
         <PhoneFrame>
           {GameRenderer && platform && viewState ? (
             <GameRenderer platform={platform} state={viewState} />
           ) : (
-            <div className="p-4 text-zinc-500">
+            <div style={{ padding: 16, color: '#71717a' }}>
               {!engine ? 'Loading engine...' : 'Initializing game...'}
             </div>
           )}
@@ -198,26 +205,27 @@ export default function Preview() {
       </div>
 
       {/* Control Panel — fills remaining width, resizable two-column */}
-      <div ref={panelRef} className="flex-1 min-w-0 flex h-full">
+      <div ref={panelRef} style={{ flex: 1, minWidth: 0, display: 'flex', height: '100%' }}>
         {/* Left column: Players & Controls */}
-        <div className="flex flex-col gap-4 overflow-auto pr-1" style={{ width: `${splitRatio * 100}%` }}>
+        <div style={{ width: `${splitRatio * 100}%`, display: 'flex', flexDirection: 'column', gap: 16, overflow: 'auto', paddingRight: 4 }}>
           {/* Player Count */}
-          <div className="bg-zinc-900 rounded-lg p-3">
-            <h3 className="text-sm font-bold text-zinc-400 mb-2">Player Count</h3>
+          <div style={card}>
+            <h3 style={label}>Player Count</h3>
             <input
               type="number"
               min={2}
               max={32}
               value={playerCount}
               onChange={(e) => setPlayerCount(Math.max(2, Math.min(32, Number(e.target.value))))}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-sm"
+              className="dk-input"
+              style={inputBase}
             />
           </div>
 
           {/* Player Switcher */}
-          <div className="bg-zinc-900 rounded-lg p-3 flex-1 overflow-auto">
-            <h3 className="text-sm font-bold text-zinc-400 mb-2">Current Player</h3>
-            <div className="space-y-1">
+          <div style={{ ...card, flex: 1, overflow: 'auto' }}>
+            <h3 style={label}>Current Player</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {mockPlayers.map((p, i) => {
                 const isActive = i === playerIndex;
                 const hue = (i * 137) % 360; // deterministic color per player
@@ -245,28 +253,49 @@ export default function Preview() {
                   <button
                     key={p.id}
                     onClick={() => setPlayerIndex(i)}
-                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left transition-colors ${
-                      isActive
-                        ? 'bg-amber-600/20 ring-1 ring-amber-500 text-white'
-                        : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300'
-                    }`}
+                    className={isActive ? '' : 'dk-player-btn'}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '6px 8px',
+                      borderRadius: 4,
+                      fontSize: 13,
+                      textAlign: 'left' as const,
+                      border: 'none',
+                      cursor: 'pointer',
+                      ...(isActive
+                        ? { background: 'rgba(217, 119, 6, 0.2)', boxShadow: 'inset 0 0 0 1px #f59e0b', color: '#fff' }
+                        : { background: '#27272a', color: '#d4d4d8' }),
+                    }}
                   >
                     {/* Avatar */}
                     <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                      style={{ background: `hsl(${hue}, 55%, 45%)` }}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        flexShrink: 0,
+                        background: `hsl(${hue}, 55%, 45%)`,
+                      }}
                     >
                       {p.nickname[0]}
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1">
-                        <span className="truncate">{p.nickname}</span>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nickname}</span>
                         {p.isHost && (
-                          <span className="text-[10px] text-amber-400 shrink-0">HOST</span>
+                          <span style={{ fontSize: 10, color: '#fbbf24', flexShrink: 0 }}>HOST</span>
                         )}
                       </div>
                       {roleLabel && (
-                        <div className="text-[10px] text-zinc-500 truncate">
+                        <div style={{ fontSize: 10, color: '#71717a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {roleLabel}
                         </div>
                       )}
@@ -279,14 +308,15 @@ export default function Preview() {
 
           {/* Game Result */}
           {gameOver && gameResult && (
-            <div className="bg-zinc-900 rounded-lg p-3">
-              <h3 className="text-sm font-bold text-green-400 mb-2">Game Over</h3>
-              <pre className="text-xs font-mono bg-zinc-800 rounded p-2 overflow-auto max-h-32 whitespace-pre-wrap">
+            <div style={card}>
+              <h3 style={{ ...label, color: '#4ade80' }}>Game Over</h3>
+              <pre style={{ fontSize: 11, fontFamily: 'monospace', background: '#27272a', borderRadius: 4, padding: 8, overflow: 'auto', maxHeight: 128, whiteSpace: 'pre-wrap' }}>
                 {JSON.stringify(gameResult, null, 2)}
               </pre>
               <button
                 onClick={resetGame}
-                className="mt-2 w-full bg-amber-600 hover:bg-amber-500 text-white px-3 py-1 rounded text-sm"
+                className="dk-btn-amber"
+                style={{ ...btnAmber, marginTop: 8, width: '100%' }}
               >
                 Reset Game
               </button>
@@ -295,10 +325,11 @@ export default function Preview() {
 
           {/* Reset button (when game is not over) */}
           {!gameOver && engine && (
-            <div className="bg-zinc-900 rounded-lg p-3">
+            <div style={card}>
               <button
                 onClick={resetGame}
-                className="w-full bg-zinc-700 hover:bg-zinc-600 text-white px-3 py-1 rounded text-sm"
+                className="dk-btn-zinc"
+                style={btnZinc}
               >
                 Reset Game
               </button>
@@ -308,40 +339,43 @@ export default function Preview() {
 
         {/* Drag handle */}
         <div
-          className="shrink-0 w-2 cursor-col-resize flex items-center justify-center group"
+          className="dk-resize-bar"
+          style={{ flexShrink: 0, width: 8, cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           onMouseDown={() => { dragging.current = true; document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none'; }}
         >
-          <div className="w-0.5 h-8 bg-zinc-700 rounded group-hover:bg-zinc-500 transition-colors" />
+          <div className="dk-resize-line" style={{ width: 2, height: 32, background: '#3f3f46', borderRadius: 2 }} />
         </div>
 
         {/* Right column: State & Logs */}
-        <div className="flex flex-col gap-4 overflow-auto pl-1" style={{ width: `${(1 - splitRatio) * 100}%` }}>
+        <div style={{ width: `${(1 - splitRatio) * 100}%`, display: 'flex', flexDirection: 'column', gap: 16, overflow: 'auto', paddingLeft: 4 }}>
           {/* State Editor */}
-          <div className="bg-zinc-900 rounded-lg p-3 flex-1 flex flex-col min-h-0">
-            <h3 className="text-sm font-bold text-zinc-400 mb-2">Game State (Full)</h3>
+          <div style={{ ...card, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <h3 style={label}>Game State (Full)</h3>
             <textarea
               value={stateJson}
               onChange={(e) => setStateJson(e.target.value)}
-              className="flex-1 bg-zinc-800 border border-zinc-700 rounded p-2 font-mono text-xs resize-none min-h-[120px]"
+              className="dk-input"
+              style={{ flex: 1, background: '#27272a', border: '1px solid #3f3f46', borderRadius: 4, padding: 8, fontFamily: 'monospace', fontSize: 11, resize: 'none', minHeight: 120, color: '#e5e5e5' }}
             />
             <button
               onClick={applyState}
-              className="mt-2 bg-amber-600 hover:bg-amber-500 text-white px-3 py-1 rounded text-sm"
+              className="dk-btn-amber"
+              style={{ ...btnAmber, marginTop: 8 }}
             >
               Apply State
             </button>
           </div>
 
           {/* Action Log */}
-          <div className="bg-zinc-900 rounded-lg p-3 h-48 overflow-auto">
-            <h3 className="text-sm font-bold text-zinc-400 mb-2">Action Log</h3>
+          <div style={{ ...card, height: 192, overflow: 'auto' }}>
+            <h3 style={label}>Action Log</h3>
             {actions.length === 0 ? (
-              <p className="text-zinc-500 text-xs">No actions yet</p>
+              <p style={{ color: '#71717a', fontSize: 11 }}>No actions yet</p>
             ) : (
-              <div className="space-y-1">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {actions.map((a, i) => (
-                  <div key={i} className="text-xs font-mono bg-zinc-800 rounded p-1">
-                    <span className="text-amber-400">{a.player}</span>: {JSON.stringify(a.action)}
+                  <div key={i} style={{ fontSize: 11, fontFamily: 'monospace', background: '#27272a', borderRadius: 4, padding: 4 }}>
+                    <span style={{ color: '#fbbf24' }}>{a.player}</span>: {JSON.stringify(a.action)}
                   </div>
                 ))}
               </div>

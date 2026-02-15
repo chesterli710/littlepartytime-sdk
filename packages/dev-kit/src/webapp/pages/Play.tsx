@@ -2,6 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import PhoneFrame from '../components/PhoneFrame';
 
+const card: React.CSSProperties = { background: '#18181b', borderRadius: 8, padding: 24 };
+const inputStyle: React.CSSProperties = { width: '100%', background: '#27272a', border: '1px solid #3f3f46', borderRadius: 4, padding: '8px 12px', marginBottom: 16, color: '#e5e5e5', fontSize: 14 };
+const btnAmber: React.CSSProperties = { width: '100%', background: '#d97706', color: '#fff', border: 'none', padding: '8px 0', borderRadius: 4, fontWeight: 600, cursor: 'pointer', fontSize: 14 };
+
 export default function Play() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [nickname, setNickname] = useState('');
@@ -61,20 +65,22 @@ export default function Play() {
 
   if (!joined) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <div className="bg-zinc-900 rounded-lg p-6 w-80">
-          <h2 className="text-xl font-bold mb-4">Join Game</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+        <div style={{ ...card, width: 320 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>Join Game</h2>
           <input
             type="text"
             placeholder="Your nickname"
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && join()}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 mb-4"
+            className="dk-input"
+            style={inputStyle}
           />
           <button
             onClick={join}
-            className="w-full bg-amber-600 hover:bg-amber-500 text-white py-2 rounded font-semibold"
+            className="dk-btn-amber"
+            style={btnAmber}
           >
             Join
           </button>
@@ -85,23 +91,35 @@ export default function Play() {
 
   if (room.phase === 'lobby' || room.phase === 'ready') {
     return (
-      <div className="max-w-md mx-auto mt-8">
-        <div className="bg-zinc-900 rounded-lg p-6">
-          <h2 className="text-xl font-bold mb-4">Lobby</h2>
-          <div className="space-y-2 mb-6">
+      <div style={{ maxWidth: 448, margin: '32px auto 0' }}>
+        <div style={card}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>Lobby</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
             {room.players.map((p: any) => (
-              <div key={p.id} className="flex items-center justify-between bg-zinc-800 rounded px-3 py-2">
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#27272a', borderRadius: 4, padding: '8px 12px' }}>
                 <span>{p.nickname} {p.isHost && '(Host)'}</span>
-                <span className={p.ready ? 'text-green-400' : 'text-zinc-500'}>
+                <span style={{ color: p.ready ? '#4ade80' : '#71717a' }}>
                   {p.ready ? 'Ready' : 'Not Ready'}
                 </span>
               </div>
             ))}
           </div>
-          <div className="flex gap-2">
+          <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={() => socket?.emit('player:ready', !isReady)}
-              className={`flex-1 py-2 rounded font-semibold ${isReady ? 'bg-zinc-700 text-zinc-300' : 'bg-green-600 text-white'}`}
+              className={isReady ? 'dk-btn-zinc' : 'dk-btn-green'}
+              style={{
+                flex: 1,
+                padding: '8px 0',
+                borderRadius: 4,
+                fontWeight: 600,
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 14,
+                ...(isReady
+                  ? { background: '#3f3f46', color: '#d4d4d8' }
+                  : { background: '#16a34a', color: '#fff' }),
+              }}
             >
               {isReady ? 'Cancel Ready' : 'Ready'}
             </button>
@@ -109,7 +127,8 @@ export default function Play() {
               <button
                 onClick={() => socket?.emit('game:start')}
                 disabled={!room.players.every((p: any) => p.ready) || room.players.length < 2}
-                className="flex-1 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white py-2 rounded font-semibold"
+                className="dk-btn-amber"
+                style={{ ...btnAmber, flex: 1, width: 'auto' }}
               >
                 Start Game
               </button>
@@ -122,19 +141,20 @@ export default function Play() {
 
   // Playing or ended
   return (
-    <div className="h-[calc(100vh-80px)] relative">
+    <div style={{ height: 'calc(100vh - 80px)', position: 'relative' }}>
       <PhoneFrame>
         {GameRenderer && platform && gameState ? (
           <GameRenderer platform={platform} state={gameState} />
         ) : (
-          <div className="p-4 text-zinc-500">Loading game...</div>
+          <div style={{ padding: 16, color: '#71717a' }}>Loading game...</div>
         )}
       </PhoneFrame>
       {room.phase === 'ended' && isHost && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[9999]">
+        <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 9999 }}>
           <button
             onClick={() => socket?.emit('game:playAgain')}
-            className="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2 rounded-full font-semibold"
+            className="dk-btn-amber"
+            style={{ ...btnAmber, width: 'auto', padding: '8px 24px', borderRadius: 9999 }}
           >
             Play Again
           </button>

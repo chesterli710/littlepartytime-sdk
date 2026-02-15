@@ -40,15 +40,14 @@ export default function PhoneFrame({ children }: { children: React.ReactNode }) 
   return (
     <div
       ref={containerRef}
-      className="flex items-center justify-center h-full overflow-hidden"
-      style={{ flex: 1, minWidth: 0, minHeight: 0 }}
+      style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', overflow: 'hidden' }}
     >
       {/* Wrapper sized to the scaled phone for correct layout flow */}
       <div style={{ width: BODY_W * scale, height: BODY_H * scale, flexShrink: 0 }}>
         {/* Phone body at original pixel size, visually scaled */}
         <div
-          className="relative"
           style={{
+            position: 'relative',
             width: BODY_W,
             height: BODY_H,
             transform: `scale(${scale})`,
@@ -57,8 +56,9 @@ export default function PhoneFrame({ children }: { children: React.ReactNode }) 
         >
           {/* Frame / bezel */}
           <div
-            className="absolute inset-0"
             style={{
+              position: 'absolute',
+              inset: 0,
               borderRadius: OUTER_R,
               background: '#1c1c1e',
               boxShadow:
@@ -68,8 +68,10 @@ export default function PhoneFrame({ children }: { children: React.ReactNode }) 
 
           {/* Screen */}
           <div
-            className="absolute overflow-hidden bg-black"
             style={{
+              position: 'absolute',
+              overflow: 'hidden',
+              background: '#000',
               top: BEZEL,
               left: BEZEL,
               width: SCREEN_W,
@@ -82,8 +84,9 @@ export default function PhoneFrame({ children }: { children: React.ReactNode }) 
                 contain:paint makes this the containing block for
                 position:fixed elements inside the game. */}
             <div
-              className="absolute overflow-hidden"
               style={{
+                position: 'absolute',
+                overflow: 'hidden',
                 top: SAFE_AREA_TOP,
                 left: 0,
                 right: 0,
@@ -97,14 +100,26 @@ export default function PhoneFrame({ children }: { children: React.ReactNode }) 
 
           {/* Dynamic Island */}
           <div
-            className="absolute left-1/2 -translate-x-1/2 bg-black rounded-full"
-            style={{ top: BEZEL + 11, width: 126, height: 37, zIndex: 10 }}
+            style={{
+              position: 'absolute',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: '#000',
+              borderRadius: 9999,
+              top: BEZEL + 11,
+              width: 126,
+              height: 37,
+              zIndex: 10,
+            }}
           />
 
           {/* Home Indicator */}
           <div
-            className="absolute left-1/2 -translate-x-1/2 rounded-full"
             style={{
+              position: 'absolute',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              borderRadius: 9999,
               bottom: BEZEL + 8,
               width: 134,
               height: 5,

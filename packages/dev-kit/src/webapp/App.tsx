@@ -14,15 +14,25 @@ export default function App() {
   });
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Nav */}
-      <nav className="bg-zinc-900 border-b border-zinc-800 px-4 py-2 flex gap-4">
-        <span className="text-amber-500 font-bold mr-4">LPT Dev Kit</span>
+      <nav style={{ background: '#18181b', borderBottom: '1px solid #27272a', padding: '8px 16px', display: 'flex', gap: 16, alignItems: 'center' }}>
+        <span style={{ color: '#f59e0b', fontWeight: 700, marginRight: 16 }}>LPT Dev Kit</span>
         {(['preview', 'play', 'debug'] as Page[]).map((p) => (
           <button
             key={p}
             onClick={() => { setPage(p); history.pushState(null, '', `/${p}`); }}
-            className={`px-3 py-1 rounded ${page === p ? 'bg-amber-600 text-white' : 'text-zinc-400 hover:text-white'}`}
+            className="dk-nav-btn"
+            style={{
+              padding: '4px 12px',
+              borderRadius: 4,
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 14,
+              ...(page === p
+                ? { background: '#d97706', color: '#fff' }
+                : { background: 'transparent', color: '#a1a1aa' }),
+            }}
           >
             {p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
@@ -30,7 +40,7 @@ export default function App() {
       </nav>
 
       {/* Content */}
-      <main className="flex-1 p-4">
+      <main style={{ flex: 1, padding: 16 }}>
         {page === 'preview' && <Preview />}
         {page === 'play' && <Play />}
         {page === 'debug' && <Debug />}

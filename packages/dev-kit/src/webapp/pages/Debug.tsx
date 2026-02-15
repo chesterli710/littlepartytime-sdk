@@ -18,20 +18,22 @@ export default function Debug() {
     return () => { sock.disconnect(); };
   }, []);
 
+  const panelStyle: React.CSSProperties = { background: '#18181b', borderRadius: 8, padding: 16, overflow: 'auto' };
+
   return (
-    <div className="grid grid-cols-2 gap-4 h-[calc(100vh-80px)]">
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, height: 'calc(100vh - 80px)' }}>
       {/* Room State */}
-      <div className="bg-zinc-900 rounded-lg p-4 overflow-auto">
-        <h2 className="text-lg font-bold mb-4 text-amber-400">Room State</h2>
-        <pre className="text-xs font-mono whitespace-pre-wrap">
+      <div style={panelStyle}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: '#fbbf24' }}>Room State</h2>
+        <pre style={{ fontSize: 11, fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
           {JSON.stringify(room, null, 2)}
         </pre>
       </div>
 
       {/* Game State */}
-      <div className="bg-zinc-900 rounded-lg p-4 overflow-auto">
-        <h2 className="text-lg font-bold mb-4 text-amber-400">Full Game State</h2>
-        <pre className="text-xs font-mono whitespace-pre-wrap">
+      <div style={panelStyle}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: '#fbbf24' }}>Full Game State</h2>
+        <pre style={{ fontSize: 11, fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
           {fullState ? JSON.stringify(fullState, null, 2) : 'No game in progress'}
         </pre>
       </div>

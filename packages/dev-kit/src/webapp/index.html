@@ -4,9 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LPT Dev Kit</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background: #0a0a0a; color: #e5e5e5; }
+    /* ── Dev-Kit UI base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0a0a0a; color: #e5e5e5; font-family: system-ui, -apple-system, sans-serif; }
+
+    /* ── Interactive states (can't be expressed as inline styles) ── */
+    .dk-nav-btn:hover { color: #fff; }
+    .dk-btn-amber:hover { background: #f59e0b; }
+    .dk-btn-zinc:hover  { background: #52525b; }
+    .dk-btn-green:hover { background: #16a34a; }
+    .dk-player-btn { transition: background 0.15s; }
+    .dk-player-btn:hover { background: #3f3f46; }
+    .dk-resize-bar .dk-resize-line { transition: background 0.15s; }
+    .dk-resize-bar:hover .dk-resize-line { background: #71717a; }
+    .dk-input:focus { outline: none; border-color: #71717a; }
+    .dk-btn-amber:disabled, .dk-btn-green:disabled { opacity: 0.5; }
   </style>
 </head>
 <body>
