@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import PhoneFrame from '../components/PhoneFrame';
 
@@ -45,23 +45,35 @@ export default function Play() {
   const isHost = me?.isHost;
   const isReady = me?.ready;
 
-  const platform = socket ? {
-    getPlayers: () => room.players.map((p: any) => ({ id: p.id, nickname: p.nickname, avatarUrl: null, isHost: p.isHost })),
-    getLocalPlayer: () => me ? { id: me.id, nickname: me.nickname, avatarUrl: null, isHost: me.isHost } : { id: '', nickname: '', avatarUrl: null, isHost: false },
-    send: (action: any) => socket.emit('game:action', action),
-    on: (event: string, handler: Function) => {
-      if (event === 'stateUpdate') socket.on('game:state', handler as any);
-    },
-    off: (event: string, handler: Function) => {
-      if (event === 'stateUpdate') socket.off('game:state', handler as any);
-    },
-    reportResult: () => {},
-    getAssetUrl: (assetPath: string) => `/assets/${assetPath}`,
-    getDeviceCapabilities: () => ({ haptics: false, motion: false }),
-    haptic: () => {},
-    onShake: () => () => {},
-    onTilt: () => () => {},
-  } : null;
+  // Use refs to avoid recreating platform on every room/me change
+  const roomRef = useRef(room);
+  roomRef.current = room;
+  const meRef = useRef(me);
+  meRef.current = me;
+
+  const platform = useMemo(() => {
+    if (!socket) return null;
+    return {
+      getPlayers: () => roomRef.current.players.map((p: any) => ({ id: p.id, nickname: p.nickname, avatarUrl: null, isHost: p.isHost })),
+      getLocalPlayer: () => {
+        const m = meRef.current;
+        return m ? { id: m.id, nickname: m.nickname, avatarUrl: null, isHost: m.isHost } : { id: '', nickname: '', avatarUrl: null, isHost: false };
+      },
+      send: (action: any) => socket.emit('game:action', action),
+      on: (event: string, handler: Function) => {
+        if (event === 'stateUpdate') socket.on('game:state', handler as any);
+      },
+      off: (event: string, handler: Function) => {
+        if (event === 'stateUpdate') socket.off('game:state', handler as any);
+      },
+      reportResult: () => {},
+      getAssetUrl: (assetPath: string) => `/assets/${assetPath}`,
+      getDeviceCapabilities: () => ({ haptics: false, motion: false }),
+      haptic: () => {},
+      onShake: () => () => {},
+      onTilt: () => () => {},
+    };
+  }, [socket]);
 
   if (!joined) {
     return (

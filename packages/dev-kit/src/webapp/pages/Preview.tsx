@@ -207,7 +207,7 @@ export default function Preview() {
       <div style={{ width: '50%', height: '100%' }}>
         <PhoneFrame>
           {GameRenderer && platform && viewState ? (
-            <GameRenderer platform={platform} state={viewState} />
+            <GameRenderer key={mockPlayers[playerIndex].id} platform={platform} state={viewState} />
           ) : (
             <div style={{ padding: 16, color: '#71717a' }}>
               {!engine ? 'Loading engine...' : 'Initializing game...'}
