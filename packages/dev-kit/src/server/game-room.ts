@@ -34,7 +34,7 @@ export function addPlayer(room: GameRoom, socketId: string, nickname: string): P
     avatarUrl: null,
     isHost,
     socketId,
-    ready: false,
+    ready: true,
   };
   room.players.push(player);
   return player;
