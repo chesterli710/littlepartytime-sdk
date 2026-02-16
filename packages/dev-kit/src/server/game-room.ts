@@ -103,3 +103,12 @@ export function resetRoom(room: GameRoom): void {
   room.phase = 'lobby';
   room.players.forEach(p => p.ready = false);
 }
+
+export function kickNonHostPlayers(room: GameRoom): Player[] {
+  const kicked = room.players.filter(p => !p.isHost);
+  room.players = room.players.filter(p => p.isHost);
+  room.state = null;
+  room.phase = 'lobby';
+  room.players.forEach(p => p.ready = false);
+  return kicked;
+}

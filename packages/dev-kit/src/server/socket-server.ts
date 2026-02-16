@@ -139,6 +139,34 @@ export function createSocketServer(options: SocketServerOptions): {
       log(`Room reset by host`);
     });
 
+    // Force reset game (host only, any phase)
+    socket.on('game:forceReset', () => {
+      if (!player.isHost) return;
+      GameRoom.resetRoom(room);
+      io.emit('room:update', {
+        players: room.players.map(p => ({ id: p.id, nickname: p.nickname, isHost: p.isHost, ready: p.ready })),
+        phase: room.phase,
+      });
+      onStateChange?.(room);
+      log(`Game force-reset by host`);
+    });
+
+    // Kick all non-host players (host only)
+    socket.on('room:kickAll', () => {
+      if (!player.isHost) return;
+      const kicked = GameRoom.kickNonHostPlayers(room);
+      kicked.forEach(p => {
+        const s = io.sockets.sockets.get(p.socketId);
+        if (s) s.disconnect(true);
+      });
+      io.emit('room:update', {
+        players: room.players.map(p => ({ id: p.id, nickname: p.nickname, isHost: p.isHost, ready: p.ready })),
+        phase: room.phase,
+      });
+      onStateChange?.(room);
+      log(`Host kicked ${kicked.length} player(s)`);
+    });
+
     // Disconnect
     socket.on('disconnect', () => {
       // Player already reconnected with a new socket — skip

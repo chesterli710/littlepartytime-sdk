@@ -153,7 +153,7 @@ export default function Play() {
 
   // Playing or ended
   return (
-    <div style={{ height: 'calc(100vh - 80px)', position: 'relative' }}>
+    <div style={{ height: 'calc(100vh - 80px)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
       <PhoneFrame>
         {GameRenderer && platform && gameState ? (
           <GameRenderer platform={platform} state={gameState} />
@@ -161,14 +161,28 @@ export default function Play() {
           <div style={{ padding: 16, color: '#71717a' }}>Loading game...</div>
         )}
       </PhoneFrame>
-      {room.phase === 'ended' && isHost && (
-        <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 9999 }}>
+      {isHost && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 160 }}>
+          {room.phase === 'ended' && (
+            <button
+              onClick={() => socket?.emit('game:playAgain')}
+              className="dk-btn-amber"
+              style={{ ...btnAmber, width: '100%', padding: '8px 0', borderRadius: 6 }}
+            >
+              Play Again
+            </button>
+          )}
           <button
-            onClick={() => socket?.emit('game:playAgain')}
-            className="dk-btn-amber"
-            style={{ ...btnAmber, width: 'auto', padding: '8px 24px', borderRadius: 9999 }}
+            onClick={() => socket?.emit('game:forceReset')}
+            style={{ width: '100%', background: '#d97706', color: '#fff', border: 'none', padding: '8px 0', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
           >
-            Play Again
+            Reset Game
+          </button>
+          <button
+            onClick={() => socket?.emit('room:kickAll')}
+            style={{ width: '100%', background: '#dc2626', color: '#fff', border: 'none', padding: '8px 0', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
+          >
+            Kick All Players
           </button>
         </div>
       )}
