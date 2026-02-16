@@ -101,7 +101,7 @@ export function handleAction(room: GameRoom, engine: GameEngine, playerId: strin
 export function resetRoom(room: GameRoom): void {
   room.state = null;
   room.phase = 'lobby';
-  room.players.forEach(p => p.ready = false);
+  room.players.forEach(p => p.ready = true);
 }
 
 export function kickNonHostPlayers(room: GameRoom): Player[] {
@@ -109,6 +109,6 @@ export function kickNonHostPlayers(room: GameRoom): Player[] {
   room.players = room.players.filter(p => p.isHost);
   room.state = null;
   room.phase = 'lobby';
-  room.players.forEach(p => p.ready = false);
+  room.players.forEach(p => p.ready = true);
   return kicked;
 }
