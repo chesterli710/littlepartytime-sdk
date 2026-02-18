@@ -38,14 +38,31 @@ export function createSocketServer(options: SocketServerOptions): {
   });
 
   io.on('connection', (socket) => {
-    const nickname = (socket.handshake.query.nickname as string) || `Player ${room.players.length + 1}`;
+    const nickname = socket.handshake.query.nickname as string;
+
+    // Debug observer: receive broadcasts but don't join as player
+    if (nickname === '__debug__') {
+      log('Debug observer connected');
+      socket.emit('room:update', {
+        players: room.players.map(p => ({ id: p.id, nickname: p.nickname, isHost: p.isHost, ready: p.ready })),
+        phase: room.phase,
+      });
+      if (room.state) socket.emit('debug:state', room.state);
+      socket.on('disconnect', () => log('Debug observer disconnected'));
+      return;
+    }
+
+    const isAuto = socket.handshake.query.auto === 'true';
+    const playerNickname = isAuto
+      ? GameRoom.getNextAvailableName(room)
+      : nickname || `Player ${room.players.length + 1}`;
 
     // Try reconnecting an existing player by nickname
-    let player = GameRoom.reconnectPlayer(room, socket.id, nickname);
+    let player = GameRoom.reconnectPlayer(room, socket.id, playerNickname);
     if (player) {
       log(`${player.nickname} reconnected (${player.id})`);
     } else {
-      player = GameRoom.addPlayer(room, socket.id, nickname);
+      player = GameRoom.addPlayer(room, socket.id, playerNickname);
       log(`${player.nickname} joined (${player.id})`);
     }
 
@@ -54,6 +71,10 @@ export function createSocketServer(options: SocketServerOptions): {
       players: room.players.map(p => ({ id: p.id, nickname: p.nickname, isHost: p.isHost, ready: p.ready })),
       phase: room.phase,
     });
+
+    // Tell the connecting client their assigned identity
+    socket.emit('player:assigned', { id: player.id, nickname: player.nickname });
+
     onStateChange?.(room);
 
     // Send current game state to reconnecting player
