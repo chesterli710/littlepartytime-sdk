@@ -21,7 +21,17 @@ export default function App() {
         {(['preview', 'play', 'debug'] as Page[]).map((p) => (
           <button
             key={p}
-            onClick={() => { setPage(p); history.pushState(null, '', `/${p}`); }}
+            onClick={() => {
+              if (p === 'preview') {
+                setPage(p);
+                history.pushState(null, '', `/${p}`);
+              } else {
+                window.open(
+                  p === 'play' ? '/play?auto=true' : `/${p}`,
+                  '_blank',
+                );
+              }
+            }}
             className="dk-nav-btn"
             style={{
               padding: '4px 12px',
