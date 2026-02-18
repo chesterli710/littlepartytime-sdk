@@ -17,6 +17,18 @@ export interface GameRoom {
   gameId: string;
 }
 
+const PLAYER_NAMES = ['Alice', 'Bob', 'Carol', 'Dave', 'Eve', 'Frank', 'Grace', 'Heidi'];
+
+export function getNextAvailableName(room: GameRoom): string {
+  const usedNames = new Set(room.players.map(p => p.nickname));
+  const poolName = PLAYER_NAMES.find(n => !usedNames.has(n));
+  if (poolName) return poolName;
+
+  let n = room.players.length + 1;
+  while (usedNames.has(`Player ${n}`)) n++;
+  return `Player ${n}`;
+}
+
 export function createRoom(gameId: string): GameRoom {
   return {
     players: [],
