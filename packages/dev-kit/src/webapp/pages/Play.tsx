@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import PhoneFrame from '../components/PhoneFrame';
+import PlatformTakeover from '../components/PlatformTakeover';
 
 const card: React.CSSProperties = { background: '#18181b', borderRadius: 8, padding: 24 };
 const inputStyle: React.CSSProperties = { width: '100%', background: '#27272a', border: '1px solid #3f3f46', borderRadius: 4, padding: '8px 12px', marginBottom: 16, color: '#e5e5e5', fontSize: 14 };
@@ -14,6 +15,7 @@ export default function Play() {
   const [gameState, setGameState] = useState<any>(null);
   const [myId, setMyId] = useState<string | null>(null);
   const [GameRenderer, setGameRenderer] = useState<React.ComponentType<any> | null>(null);
+  const [gameResult, setGameResult] = useState<any>(null);
 
   // Load renderer
   useEffect(() => {
@@ -32,10 +34,18 @@ export default function Play() {
       setJoined(true);
     });
 
-    sock.on('room:update', setRoom);
+    sock.on('room:update', (r: any) => {
+      setRoom(r);
+      // Clear game result when room resets to lobby
+      if (r.phase === 'lobby') {
+        setGameResult(null);
+        setGameState(null);
+      }
+    });
     sock.on('game:state', setGameState);
     sock.on('game:result', (result) => {
       console.log('Game result:', result);
+      setGameResult(result);
     });
 
     setSocket(sock);
@@ -44,6 +54,12 @@ export default function Play() {
   const me = room.players.find((p: any) => socket && p.socketId === socket.id) || room.players.find((p: any) => p.nickname === nickname);
   const isHost = me?.isHost;
   const isReady = me?.ready;
+
+  const gameOver = room.phase === 'ended' && gameResult !== null;
+
+  const handleReturn = useCallback(() => {
+    socket?.emit('game:playAgain');
+  }, [socket]);
 
   // Use refs to avoid recreating platform on every room/me change
   const roomRef = useRef(room);
@@ -155,7 +171,13 @@ export default function Play() {
   return (
     <div style={{ height: 'calc(100vh - 80px)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
       <PhoneFrame>
-        {GameRenderer && platform && gameState ? (
+        {gameOver ? (
+          <PlatformTakeover
+            result={gameResult}
+            players={room.players.map((p: any) => ({ id: p.id, nickname: p.nickname }))}
+            onReturn={handleReturn}
+          />
+        ) : GameRenderer && platform && gameState ? (
           <GameRenderer platform={platform} state={gameState} />
         ) : (
           <div style={{ padding: 16, color: '#71717a' }}>Loading game...</div>
@@ -163,15 +185,6 @@ export default function Play() {
       </PhoneFrame>
       {isHost && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 160 }}>
-          {room.phase === 'ended' && (
-            <button
-              onClick={() => socket?.emit('game:playAgain')}
-              className="dk-btn-amber"
-              style={{ ...btnAmber, width: '100%', padding: '8px 0', borderRadius: 6 }}
-            >
-              Play Again
-            </button>
-          )}
           <button
             onClick={() => socket?.emit('game:forceReset')}
             style={{ width: '100%', background: '#d97706', color: '#fff', border: 'none', padding: '8px 0', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}

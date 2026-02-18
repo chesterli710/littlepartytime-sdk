@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import PhoneFrame from '../components/PhoneFrame';
+import PlatformTakeover from '../components/PlatformTakeover';
 
 const PLAYER_NAMES = ['Alice', 'Bob', 'Carol', 'Dave', 'Eve', 'Frank', 'Grace', 'Heidi'];
 
@@ -206,7 +207,9 @@ export default function Preview() {
       {/* Renderer — half the screen width */}
       <div style={{ width: '50%', height: '100%' }}>
         <PhoneFrame>
-          {GameRenderer && platform && viewState ? (
+          {gameOver && gameResult ? (
+            <PlatformTakeover result={gameResult} players={mockPlayers} onReturn={resetGame} />
+          ) : GameRenderer && platform && viewState ? (
             <GameRenderer key={mockPlayers[playerIndex].id} platform={platform} state={viewState} />
           ) : (
             <div style={{ padding: 16, color: '#71717a' }}>
@@ -318,17 +321,14 @@ export default function Preview() {
             </div>
           </div>
 
-          {/* Game Result */}
+          {/* Game Result (shown in PhoneFrame as Platform Takeover) */}
           {gameOver && gameResult && (
             <div style={card}>
               <h3 style={{ ...label, color: '#4ade80' }}>Game Over</h3>
-              <pre style={{ fontSize: 11, fontFamily: 'monospace', background: '#27272a', borderRadius: 4, padding: 8, overflow: 'auto', maxHeight: 128, whiteSpace: 'pre-wrap' }}>
-                {JSON.stringify(gameResult, null, 2)}
-              </pre>
               <button
                 onClick={resetGame}
                 className="dk-btn-amber"
-                style={{ ...btnAmber, marginTop: 8, width: '100%' }}
+                style={{ ...btnAmber, width: '100%' }}
               >
                 Reset Game
               </button>
