@@ -17,12 +17,49 @@ export default function Play() {
   const [GameRenderer, setGameRenderer] = useState<React.ComponentType<any> | null>(null);
   const [gameResult, setGameResult] = useState<any>(null);
 
+  const isAutoMode = useMemo(() => new URLSearchParams(window.location.search).get('auto') === 'true', []);
+  const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
+
   // Load renderer
   useEffect(() => {
     import('/src/renderer.tsx').then((mod) => {
       setGameRenderer(() => mod.default || mod.Renderer);
     }).catch(console.error);
   }, []);
+
+  // Auto-join: connect immediately with server-assigned name
+  useEffect(() => {
+    if (!isAutoMode) return;
+
+    const sock = io('http://localhost:4001', { query: { auto: 'true' } });
+
+    sock.on('connect', () => {
+      setMyId(sock.id);
+      setJoined(true);
+    });
+
+    sock.on('player:assigned', ({ id, nickname: assignedName }: { id: string; nickname: string }) => {
+      setMyPlayerId(id);
+      setNickname(assignedName);
+    });
+
+    sock.on('room:update', (r: any) => {
+      setRoom(r);
+      if (r.phase === 'lobby') {
+        setGameResult(null);
+        setGameState(null);
+      }
+    });
+    sock.on('game:state', setGameState);
+    sock.on('game:result', (result) => {
+      console.log('Game result:', result);
+      setGameResult(result);
+    });
+
+    setSocket(sock);
+
+    return () => { sock.disconnect(); };
+  }, [isAutoMode]);
 
   const join = useCallback(() => {
     if (!nickname.trim()) return;
@@ -32,6 +69,10 @@ export default function Play() {
     sock.on('connect', () => {
       setMyId(sock.id);
       setJoined(true);
+    });
+
+    sock.on('player:assigned', ({ id }: { id: string; nickname: string }) => {
+      setMyPlayerId(id);
     });
 
     sock.on('room:update', (r: any) => {
@@ -51,7 +92,8 @@ export default function Play() {
     setSocket(sock);
   }, [nickname]);
 
-  const me = room.players.find((p: any) => socket && p.socketId === socket.id) || room.players.find((p: any) => p.nickname === nickname);
+  const me = room.players.find((p: any) => myPlayerId && p.id === myPlayerId)
+           || room.players.find((p: any) => p.nickname === nickname);
   const isHost = me?.isHost;
   const isReady = me?.ready;
 
@@ -91,7 +133,7 @@ export default function Play() {
     };
   }, [socket]);
 
-  if (!joined) {
+  if (!joined && !isAutoMode) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
         <div style={{ ...card, width: 320 }}>
