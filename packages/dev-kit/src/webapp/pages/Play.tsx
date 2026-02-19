@@ -28,10 +28,16 @@ export default function Play() {
   }, []);
 
   // Auto-join: connect immediately with server-assigned name
+  // Use sessionStorage to persist identity across HMR reconnects
   useEffect(() => {
     if (!isAutoMode) return;
 
-    const sock = io('http://localhost:4001', { query: { auto: 'true' } });
+    const stored = sessionStorage.getItem('lpt-player');
+    const query = stored
+      ? { nickname: JSON.parse(stored).nickname }
+      : { auto: 'true' };
+
+    const sock = io('http://localhost:4001', { query });
 
     sock.on('connect', () => {
       setMyId(sock.id);
@@ -41,6 +47,7 @@ export default function Play() {
     sock.on('player:assigned', ({ id, nickname: assignedName }: { id: string; nickname: string }) => {
       setMyPlayerId(id);
       setNickname(assignedName);
+      sessionStorage.setItem('lpt-player', JSON.stringify({ id, nickname: assignedName }));
     });
 
     sock.on('room:update', (r: any) => {
