@@ -12,13 +12,13 @@ export interface GameState {
 }
 
 export interface GameAssets {
-  /** 1:1 game list icon (relative path from project root, .png or .webp) */
+  /** 1:1 game list icon (512x512+ recommended, .png or .webp) */
   icon: string;
-  /** 16:9 lobby banner */
+  /** 16:9 lobby banner (1280x720+ recommended, .png or .webp) */
   banner: string;
-  /** 21:9 store/featured cover */
+  /** 21:9 store/featured cover (1260x540+ recommended, .png or .webp) */
   cover: string;
-  /** 9:21 loading/splash screen */
+  /** 9:21 loading/splash screen (1080x2520+ recommended, .png or .webp) */
   splash: string;
 }
 

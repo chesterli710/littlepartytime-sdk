@@ -4,10 +4,10 @@ const config: GameConfig = {
   name: "{{gameName}}",
   description: "{{description}}",
   assets: {
-    icon: "assets/icon.png",
-    banner: "assets/banner.png",
-    cover: "assets/cover.png",
-    splash: "assets/splash.png",
+    icon: "assets/icon.png",        // 1:1 (512x512+), PNG recommended
+    banner: "assets/banner.png",    // 16:9 (1280x720+), WebP recommended for production
+    cover: "assets/cover.png",      // 21:9 (1260x540+), WebP recommended for production
+    splash: "assets/splash.png",    // 9:21 (1080x2520+), WebP recommended for production
   },
   minPlayers: {{minPlayers}},
   maxPlayers: {{maxPlayers}},

@@ -23,10 +23,10 @@ my-game/
 ├── vitest.config.ts       # Test configuration
 ├── tsconfig.json
 ├── assets/                # Game images and custom assets
-│   ├── icon.png           # 1:1 (256x256+) - game list icon
-│   ├── banner.png         # 16:9 (640x360+) - lobby banner
-│   ├── cover.png          # 21:9 (840x360+) - store/featured cover
-│   ├── splash.png         # 9:21 (360x840+) - loading screen
+│   ├── icon.png           # 1:1 (512x512+) - game list icon
+│   ├── banner.webp        # 16:9 (1280x720+) - lobby banner
+│   ├── cover.webp         # 21:9 (1260x540+) - store/featured cover
+│   ├── splash.webp        # 9:21 (1080x2520+) - loading screen
 │   ├── cards/             # Custom game assets (optional)
 │   │   ├── king.png
 │   │   └── queen.png
@@ -76,10 +76,10 @@ const config: GameConfig = {
   name: "My Game",           // Display name (Chinese preferred for CN users)
   description: "...",        // Brief description
   assets: {
-    icon: "assets/icon.png",       // 1:1 game list icon
-    banner: "assets/banner.png",   // 16:9 lobby banner
-    cover: "assets/cover.png",     // 21:9 store/featured cover
-    splash: "assets/splash.png",   // 9:21 loading screen
+    icon: "assets/icon.png",        // 1:1 (512x512+), PNG recommended
+    banner: "assets/banner.webp",   // 16:9 (1280x720+), WebP recommended
+    cover: "assets/cover.webp",     // 21:9 (1260x540+), WebP recommended
+    splash: "assets/splash.webp",   // 9:21 (1080x2520+), WebP recommended
   },
   minPlayers: 2,
   maxPlayers: 6,
@@ -594,10 +594,10 @@ The `.zip` upload package contains:
 ├── rules.md       # Game rules
 ├── bundle.js      # Client-side bundle
 ├── engine.cjs     # Server-side engine
-├── icon.png       # 1:1 game icon
-├── banner.png     # 16:9 banner
-├── cover.png      # 21:9 cover
-├── splash.png     # 9:21 splash screen
+├── icon.png|.webp    # 1:1 game icon
+├── banner.png|.webp  # 16:9 banner
+├── cover.png|.webp   # 21:9 cover
+├── splash.png|.webp  # 9:21 splash screen
 └── assets/        # Custom game assets (if any)
     ├── cards/
     │   └── king.png
@@ -657,21 +657,21 @@ export default defineConfig({
 
 Every game must include 4 images in the `assets/` directory. These are validated and packaged by the `pack` command.
 
-| Image | Aspect Ratio | Min Size | Purpose |
-|-------|-------------|----------|---------|
-| `icon.png` | 1:1 | 256x256 | Game list icon |
-| `banner.png` | 16:9 | 640x360 | Lobby banner |
-| `cover.png` | 21:9 | 840x360 | Store/featured cover |
-| `splash.png` | 9:21 | 360x840 | Loading/splash screen |
+| Image | Aspect Ratio | Recommended Size | Purpose |
+|-------|-------------|-----------------|---------|
+| `icon.png` | 1:1 | 512x512 | Game list icon |
+| `banner.png` or `.webp` | 16:9 | 1280x720 | Lobby banner |
+| `cover.png` or `.webp` | 21:9 | 1260x540 | Store/featured cover |
+| `splash.png` or `.webp` | 9:21 | 1080x2520 | Loading/splash screen |
 
 **Rules:**
-- **Formats**: PNG or WebP only
+- **Formats**: PNG or WebP only. Recommendation: use PNG for icon (small, sharp edges), WebP for banner/cover/splash (photo-like content, 60-80% smaller than PNG)
 - **Aspect ratio**: Must match exactly (1% tolerance)
-- **Minimum dimensions**: Must meet or exceed the minimum size
-- **File size**: Warning if any image exceeds 2MB
-- **Paths**: Referenced in `GameConfig.assets` as relative paths from the project root
+- **Dimensions**: Must meet or exceed the recommended size. Exact match preferred; larger with correct ratio also accepted
+- **File size**: Warning if any image exceeds 2MB (WebP typically avoids this even at splash resolution)
+- **Paths**: Referenced in `GameConfig.assets` as relative paths from the project root (e.g., `"assets/banner.webp"`)
 
-The `pack` command reads these images, validates them, and includes them in the zip with canonical names (`icon.png`, `banner.png`, etc.).
+The `pack` command reads these images, validates them, and includes them in the zip with canonical names (`icon`, `banner`, `cover`, `splash`) preserving the original file extension (`.png` or `.webp`).
 
 ### Custom Game Assets
 
@@ -679,10 +679,10 @@ For assets used inside your game UI (card images, sound effects, fonts, etc.), p
 
 ```
 assets/
-├── icon.png          # Platform display images (root level, required)
-├── banner.png
-├── cover.png
-├── splash.png
+├── icon.png          # Platform display images (root level, required, .png or .webp)
+├── banner.webp
+├── cover.webp
+├── splash.webp
 ├── cards/            # Custom game assets (subdirectories)
 │   ├── king.png
 │   └── queen.png

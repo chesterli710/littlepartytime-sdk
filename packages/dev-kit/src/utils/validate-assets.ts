@@ -10,10 +10,10 @@ export interface AssetSpec {
 }
 
 export const ASSET_SPECS: AssetSpec[] = [
-  { key: 'icon',   ratioWidth: 1,  ratioHeight: 1,  minWidth: 256, minHeight: 256 },
-  { key: 'banner', ratioWidth: 16, ratioHeight: 9,  minWidth: 640, minHeight: 360 },
-  { key: 'cover',  ratioWidth: 21, ratioHeight: 9,  minWidth: 840, minHeight: 360 },
-  { key: 'splash', ratioWidth: 9,  ratioHeight: 21, minWidth: 360, minHeight: 840 },
+  { key: 'icon',   ratioWidth: 1,  ratioHeight: 1,  minWidth: 512,  minHeight: 512  },
+  { key: 'banner', ratioWidth: 16, ratioHeight: 9,  minWidth: 1280, minHeight: 720  },
+  { key: 'cover',  ratioWidth: 21, ratioHeight: 9,  minWidth: 1260, minHeight: 540  },
+  { key: 'splash', ratioWidth: 9,  ratioHeight: 21, minWidth: 1080, minHeight: 2520 },
 ];
 
 export interface AssetValidationResult {
@@ -66,7 +66,7 @@ export function validateAssets(
 
       if (width < spec.minWidth || height < spec.minHeight) {
         errors.push(
-          `${spec.key}: image is ${width}x${height}, minimum required is ${spec.minWidth}x${spec.minHeight}`,
+          `${spec.key}: image is ${width}x${height}, recommended minimum is ${spec.minWidth}x${spec.minHeight}`,
         );
       }
 

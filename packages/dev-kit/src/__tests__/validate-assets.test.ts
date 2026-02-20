@@ -65,7 +65,7 @@ function setupAssets(dir: string, overrides?: Partial<Record<string, { width: nu
     icon:   { width: 512,  height: 512  },
     banner: { width: 1600, height: 900  },
     cover:  { width: 2100, height: 900  },
-    splash: { width: 900,  height: 2100 },
+    splash: { width: 1080, height: 2520 },
   };
 
   const assetsDir = path.join(dir, 'assets');
@@ -145,7 +145,15 @@ describe('validateAssets', () => {
     const assets = setupAssets(dir, { icon: { width: 100, height: 100 } });
     const result = validateAssets(dir, assets);
     expect(result.valid).toBe(false);
-    expect(result.errors.some(e => e.includes('100x100') && e.includes('256x256'))).toBe(true);
+    expect(result.errors.some(e => e.includes('100x100') && e.includes('512x512'))).toBe(true);
+  });
+
+  it('should fail when images are at old minimum dimensions', () => {
+    const dir = makeTempDir();
+    const assets = setupAssets(dir, { splash: { width: 360, height: 840 } });
+    const result = validateAssets(dir, assets);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('splash') && e.includes('recommended minimum'))).toBe(true);
   });
 
   it('should fail when aspect ratio is wrong', () => {
