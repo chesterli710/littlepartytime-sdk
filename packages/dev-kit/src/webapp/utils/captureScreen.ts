@@ -11,48 +11,51 @@ const CAPTURE_H = 751; // 844 - 59 - 34
  * Also exposed on window.__devkit__.captureScreen() for LLM/Playwright callers:
  *   await page.evaluate(() => window.__devkit__.captureScreen())
  *
- * ## Why onclone?
- * html2canvas clones the entire document before rendering. The PhoneFrame DOM
- * has three CSS properties that break the capture:
+ * ## Strategy: clone into a mobile-viewport-sized container
  *
- * - `contain: paint` on Screen div and safe-area div — html2canvas uses
- *   getBoundingClientRect() to compute clip rects, which returns the *visual*
- *   (post-transform) size, clipping the output to ~half height.
- * - `transform: scale(x)` on the phone body — same getBoundingClientRect
- *   mismatch; intrinsic size is 390×751 but visual rect is smaller.
- * - `overflow: hidden` on ancestors — once transform is removed, the full-size
- *   phone body overflows its scaled wrapper and gets clipped.
+ * All LPT games are designed for full-screen mobile. In the dev-kit, the game
+ * renders inside PhoneFrame which wraps it in transform:scale + contain:paint.
+ * html2canvas cannot correctly capture elements inside this hierarchy because
+ * getBoundingClientRect() returns the scaled visual size, not the natural size.
  *
- * Fix: in the `onclone` callback, neutralise all three properties on ancestor
- * elements of the *cloned* document. The original DOM is never touched.
+ * Instead of fighting html2canvas, we deep-clone the game DOM subtree into a
+ * standalone 390×751 container appended to <body> — no transforms, no contain,
+ * no overflow clipping from ancestors. The game content is designed for exactly
+ * this size, so it renders correctly. html2canvas captures the clean container
+ * with no coordinate mismatches.
  */
 export async function captureScreen(): Promise<string> {
   const el = document.getElementById('devkit-game-screen');
   if (!el) throw new Error('[devkit] #devkit-game-screen not found — is the Preview page active?');
 
-  const canvas = await html2canvas(el, {
-    width: CAPTURE_W,
-    height: CAPTURE_H,
-    scale: 2,
-    logging: false,
-    backgroundColor: null,
-    useCORS: true,
-    allowTaint: true,
-    onclone: (clonedDoc: Document) => {
-      const clonedEl = clonedDoc.getElementById('devkit-game-screen');
-      if (!clonedEl) return;
+  // Deep-clone the safe-area subtree into a standalone mobile-sized container.
+  const clone = el.cloneNode(true) as HTMLElement;
+  clone.removeAttribute('id');
+  clone.removeAttribute('data-testid');
+  clone.style.cssText = `
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    width: ${CAPTURE_W}px;
+    height: ${CAPTURE_H}px;
+    overflow: hidden;
+  `;
+  document.body.appendChild(clone);
 
-      let node: HTMLElement | null = clonedEl;
-      while (node && node !== clonedDoc.body) {
-        node.style.contain = '';
-        node.style.transform = 'none';
-        node.style.overflow = 'visible';
-        node = node.parentElement;
-      }
-    },
-  });
-
-  return canvas.toDataURL('image/png');
+  try {
+    const canvas = await html2canvas(clone, {
+      width: CAPTURE_W,
+      height: CAPTURE_H,
+      scale: 2,
+      logging: false,
+      backgroundColor: null,
+      useCORS: true,
+      allowTaint: true,
+    });
+    return canvas.toDataURL('image/png');
+  } finally {
+    document.body.removeChild(clone);
+  }
 }
 
 export function downloadScreenshot(dataUrl: string): void {
