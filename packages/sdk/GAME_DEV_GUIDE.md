@@ -430,8 +430,32 @@ Features:
 - **Action log**: See all actions sent by players in real-time
 - **Game over detection**: Automatically detects when `isGameOver()` returns true and displays results
 - **Reset**: Re-initialize the game at any time
+- **Screenshot**: Capture the game content area (without the phone frame) as a PNG file
 
 This enables a rapid development cycle: **edit code -> refresh browser -> test immediately**.
+
+### Screenshot
+
+A **Screenshot** button floats at the bottom of the phone frame on the Preview page. Clicking it captures the game's safe area (390×751 px, 2× retina resolution) as a PNG and downloads it immediately. The phone bezel, Dynamic Island, and Home Indicator are excluded.
+
+The same capture function is also exposed as a JavaScript API on the page, so LLMs and Playwright scripts can call it programmatically:
+
+```javascript
+// Via Playwright evaluate (e.g. in a test or from an AI agent):
+const dataUrl = await page.evaluate(() => window.__devkit__.captureScreen());
+// dataUrl is a "data:image/png;base64,..." string — pass it to a vision model or save it.
+
+// Save to file in Node.js:
+const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
+fs.writeFileSync('screenshot.png', Buffer.from(base64, 'base64'));
+```
+
+Alternatively, Playwright's built-in element screenshot can target the game area directly using the stable test ID:
+
+```javascript
+const el = page.getByTestId('game-screen');
+await el.screenshot({ path: 'screenshot.png' });
+```
 
 ### Multiplayer Page
 
@@ -533,6 +557,16 @@ const pages = preview.getPlayerPages();   // Get all Page objects
 await preview.readyAll();                 // Click "Ready" for all players
 await preview.startGame();                // Host clicks "Start Game"
 await preview.stop();                     // Clean up browser + server
+```
+
+To capture a screenshot of the game area during a test, use either approach:
+
+```typescript
+// Option A: via window.__devkit__ (returns base64 data URL)
+const dataUrl = await page.evaluate(() => window.__devkit__.captureScreen());
+
+// Option B: via Playwright element screenshot (saves directly to file)
+await page.getByTestId('game-screen').screenshot({ path: 'screenshot.png' });
 ```
 
 ### Excluding E2E Tests from Unit Test Runs

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Preview from './pages/Preview';
 import Play from './pages/Play';
 import Debug from './pages/Debug';
+import { captureScreen } from './utils/captureScreen';
 
 type Page = 'preview' | 'play' | 'debug';
 
@@ -12,6 +13,13 @@ export default function App() {
     if (path.includes('debug')) return 'debug';
     return 'preview';
   });
+
+  // Expose capture API for LLM/Playwright callers:
+  //   await page.evaluate(() => window.__devkit__.captureScreen())
+  useEffect(() => {
+    (window as any).__devkit__ = { captureScreen };
+    return () => { delete (window as any).__devkit__; };
+  }, []);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -47,6 +55,22 @@ export default function App() {
             {p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
         ))}
+        <div style={{ flex: 1 }} />
+        <button
+          onClick={() => fetch('http://localhost:4001/api/reset', { method: 'POST' })}
+          className="dk-nav-btn"
+          style={{
+            padding: '4px 12px',
+            borderRadius: 4,
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: 14,
+            background: '#dc2626',
+            color: '#fff',
+          }}
+        >
+          Reset
+        </button>
       </nav>
 
       {/* Content */}

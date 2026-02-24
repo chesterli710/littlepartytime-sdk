@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import PhoneFrame from '../components/PhoneFrame';
 import PlatformTakeover from '../components/PlatformTakeover';
+import { captureScreen, downloadScreenshot } from '../utils/captureScreen';
 
 const PLAYER_NAMES = ['Alice', 'Bob', 'Carol', 'Dave', 'Eve', 'Frank', 'Grace', 'Heidi'];
 
@@ -23,6 +24,7 @@ export default function Preview() {
   const [gameOver, setGameOver] = useState(false);
   const [gameResult, setGameResult] = useState<any>(null);
   const [stateJson, setStateJson] = useState('');
+  const [capturing, setCapturing] = useState(false);
 
   // Refs to avoid recreating platform on every state change
   const fullStateRef = useRef(fullState);
@@ -202,10 +204,23 @@ export default function Preview() {
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, []);
 
+  const handleScreenshot = useCallback(async () => {
+    if (capturing) return;
+    setCapturing(true);
+    try {
+      const dataUrl = await captureScreen();
+      downloadScreenshot(dataUrl);
+    } catch (err) {
+      console.error('[DevKit] Screenshot failed:', err);
+    } finally {
+      setCapturing(false);
+    }
+  }, [capturing]);
+
   return (
     <div style={{ display: 'flex', gap: 16, height: 'calc(100vh - 80px)' }}>
       {/* Renderer — half the screen width */}
-      <div style={{ width: '50%', height: '100%' }}>
+      <div style={{ width: '50%', height: '100%', position: 'relative' }}>
         <PhoneFrame>
           {gameOver && gameResult ? (
             <PlatformTakeover result={gameResult} players={mockPlayers} onReturn={resetGame} />
@@ -217,6 +232,36 @@ export default function Preview() {
             </div>
           )}
         </PhoneFrame>
+        {/* Screenshot button — floats below the centered phone */}
+        <button
+          onClick={handleScreenshot}
+          disabled={capturing}
+          title="Capture game screen (without phone frame)"
+          style={{
+            position: 'absolute',
+            bottom: 12,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '5px 14px',
+            borderRadius: 6,
+            border: '1px solid #3f3f46',
+            background: capturing ? '#27272a' : '#18181b',
+            color: capturing ? '#71717a' : '#a1a1aa',
+            fontSize: 13,
+            cursor: capturing ? 'default' : 'pointer',
+            transition: 'background 0.15s, color 0.15s',
+            zIndex: 10,
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+          {capturing ? 'Capturing...' : 'Screenshot'}
+        </button>
       </div>
 
       {/* Control Panel — fills remaining width, resizable two-column */}

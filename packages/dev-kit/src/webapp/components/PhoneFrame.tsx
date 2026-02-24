@@ -84,6 +84,8 @@ export default function PhoneFrame({ children }: { children: React.ReactNode }) 
                 contain:paint makes this the containing block for
                 position:fixed elements inside the game. */}
             <div
+              id="devkit-game-screen"
+              data-testid="game-screen"
               style={{
                 position: 'absolute',
                 overflow: 'hidden',

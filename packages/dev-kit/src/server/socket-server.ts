@@ -32,7 +32,30 @@ export function createSocketServer(options: SocketServerOptions): {
   // Create room
   const room = GameRoom.createRoom('dev-game');
 
-  const server = http.createServer();
+  const server = http.createServer((req, res) => {
+    // CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/api/reset') {
+      GameRoom.resetAll(room);
+      io.disconnectSockets(true);
+      onStateChange?.(room);
+      log('Room fully reset via API');
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+      return;
+    }
+
+    res.writeHead(404);
+    res.end();
+  });
   const io = new Server(server, {
     cors: { origin: '*' },
   });
