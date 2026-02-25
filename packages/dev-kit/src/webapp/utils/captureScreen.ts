@@ -1,61 +1,53 @@
 import html2canvas from 'html2canvas';
 
-// Must match PhoneFrame constants: SCREEN_W=390, SAFE_AREA_TOP=59, SAFE_AREA_BOTTOM=34, SCREEN_H=844
-const CAPTURE_W = 390;
-const CAPTURE_H = 751; // 844 - 59 - 34
+// PhoneFrame body width (bezel included): 390 + 8*2
+const PHONE_W = 406;
 
 /**
- * Captures the game content area (safe area only, no phone bezel).
- * Returns a base64-encoded PNG data URL.
+ * Captures the phone model (game content + bezel frame) as a PNG.
+ * Returns a base64-encoded data URL.
  *
  * Also exposed on window.__devkit__.captureScreen() for LLM/Playwright callers:
  *   await page.evaluate(() => window.__devkit__.captureScreen())
  *
- * ## Strategy: clone into a mobile-viewport-sized container
+ * ## Strategy: capture from documentElement with visual crop
  *
- * All LPT games are designed for full-screen mobile. In the dev-kit, the game
- * renders inside PhoneFrame which wraps it in transform:scale + contain:paint.
- * html2canvas cannot correctly capture elements inside this hierarchy because
- * getBoundingClientRect() returns the scaled visual size, not the natural size.
+ * The phone body lives inside transform:scale(x) + contain:paint, which makes
+ * its getBoundingClientRect() return the *visual* (scaled) size. Previous
+ * attempts to target the game element directly all failed because html2canvas
+ * reads the target's bounding rect first, then clones — the crop coordinates
+ * never agree with the clone's layout.
  *
- * Instead of fighting html2canvas, we deep-clone the game DOM subtree into a
- * standalone 390×751 container appended to <body> — no transforms, no contain,
- * no overflow clipping from ancestors. The game content is designed for exactly
- * this size, so it renders correctly. html2canvas captures the clean container
- * with no coordinate mismatches.
+ * By targeting document.documentElement and passing the phone body's visual
+ * bounding rect as an explicit crop, html2canvas renders the full page as-is
+ * (all CSS respected) and simply cuts out the phone region. Crop coordinates
+ * equal visual coordinates — no mismatch possible.
  */
 export async function captureScreen(): Promise<string> {
-  const el = document.getElementById('devkit-game-screen');
-  if (!el) throw new Error('[devkit] #devkit-game-screen not found — is the Preview page active?');
+  const phone = document.getElementById('devkit-phone');
+  if (!phone) throw new Error('[devkit] #devkit-phone not found — is the Preview page active?');
 
-  // Deep-clone the safe-area subtree into a standalone mobile-sized container.
-  const clone = el.cloneNode(true) as HTMLElement;
-  clone.removeAttribute('id');
-  clone.removeAttribute('data-testid');
-  clone.style.cssText = `
-    position: absolute;
-    left: -9999px;
-    top: 0;
-    width: ${CAPTURE_W}px;
-    height: ${CAPTURE_H}px;
-    overflow: hidden;
-  `;
-  document.body.appendChild(clone);
-
-  try {
-    const canvas = await html2canvas(clone, {
-      width: CAPTURE_W,
-      height: CAPTURE_H,
-      scale: 2,
-      logging: false,
-      backgroundColor: null,
-      useCORS: true,
-      allowTaint: true,
-    });
-    return canvas.toDataURL('image/png');
-  } finally {
-    document.body.removeChild(clone);
+  const rect = phone.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) {
+    throw new Error('[devkit] phone frame has zero dimensions');
   }
+
+  // Upsample so the output matches the phone's natural size at 2× retina.
+  const outputScale = (PHONE_W * 2) / rect.width;
+
+  const canvas = await html2canvas(document.documentElement, {
+    x: rect.left + window.scrollX,
+    y: rect.top + window.scrollY,
+    width: rect.width,
+    height: rect.height,
+    scale: outputScale,
+    logging: false,
+    backgroundColor: null,
+    useCORS: true,
+    allowTaint: true,
+  });
+
+  return canvas.toDataURL('image/png');
 }
 
 export function downloadScreenshot(dataUrl: string): void {

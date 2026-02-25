@@ -46,6 +46,7 @@ export default function PhoneFrame({ children }: { children: React.ReactNode }) 
       <div style={{ width: BODY_W * scale, height: BODY_H * scale, flexShrink: 0 }}>
         {/* Phone body at original pixel size, visually scaled */}
         <div
+          id="devkit-phone"
           style={{
             position: 'relative',
             width: BODY_W,
