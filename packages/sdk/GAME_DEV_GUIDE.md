@@ -86,6 +86,8 @@ const config: GameConfig = {
   tags: ["strategy", "card"],
   version: "1.0.0",
   sdkVersion: "2.0.0",
+  // Optional: include a demo site in the game package
+  // demo: { title: "My Game — Demo" },
 };
 
 export default config;
@@ -606,8 +608,9 @@ This command:
 3. Reads `GameConfig` from the built engine to extract metadata
 4. Validates the required image assets (format, dimensions, aspect ratio)
 5. Validates `rules.md` exists and is non-empty
-6. Generates `manifest.json` from your config
-7. Creates a `.zip` file in the `dist/` directory containing code, manifest, rules, and images
+6. If `GameConfig.demo` is set, validates that `demo/dist/index.html` exists
+7. Generates `manifest.json` from your config
+8. Creates a `.zip` file in the `dist/` directory containing code, manifest, rules, images, and optional demo site
 
 ### Build Output
 
@@ -632,11 +635,13 @@ The `.zip` upload package contains:
 ├── banner.png|.webp  # 16:9 banner
 ├── cover.png|.webp   # 21:9 cover
 ├── splash.png|.webp  # 9:21 splash screen
-└── assets/        # Custom game assets (if any)
-    ├── cards/
-    │   └── king.png
-    └── sounds/
-        └── flip.mp3
+├── assets/        # Custom game assets (if any)
+│   ├── cards/
+│   │   └── king.png
+│   └── sounds/
+│       └── flip.mp3
+└── demo/          # Demo site (optional, only if GameConfig.demo is set)
+    └── index.html
 ```
 
 ### Configuration

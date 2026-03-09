@@ -8,4 +8,4 @@ export type {
   DeviceTilt,
   DeviceCapabilities,
 } from './types';
-export type { PlayerState, GameState, GameAssets, GameConfig, GameEngine, GameRendererProps } from './interfaces';
+export type { PlayerState, GameState, GameAssets, GameDemo, GameConfig, GameEngine, GameRendererProps } from './interfaces';

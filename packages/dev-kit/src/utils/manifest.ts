@@ -16,6 +16,10 @@ export interface GameManifest {
     splash: string;
   };
   rules: string;
+  demo?: {
+    entry: string;
+    title: string;
+  };
 }
 
 export function getExtension(filePath: string): string {
@@ -36,6 +40,7 @@ export function generateManifest(config: {
   version: string;
   sdkVersion: string;
   price?: number;
+  demo?: { title: string };
 }): GameManifest {
   const manifest: GameManifest = {
     name: config.name,
@@ -56,6 +61,13 @@ export function generateManifest(config: {
 
   if (config.price !== undefined) {
     manifest.price = config.price;
+  }
+
+  if (config.demo) {
+    manifest.demo = {
+      entry: 'demo/index.html',
+      title: config.demo.title,
+    };
   }
 
   return manifest;

@@ -131,10 +131,25 @@ export async function packCommand(projectDir: string): Promise<void> {
     console.log(`  Found ${gameAssetsResult.entries.length} custom asset(s) (${(gameAssetsResult.totalSize / 1024).toFixed(1)}KB total)`);
   }
 
-  // Step 8: Generate manifest
+  // Step 8: Validate demo site (optional)
+  const demo = config.demo as { title: string } | undefined;
+  const demoDistDir = path.join(projectDir, 'demo', 'dist');
+  let hasDemo = false;
+
+  if (demo) {
+    if (!fs.existsSync(demoDistDir) || !fs.existsSync(path.join(demoDistDir, 'index.html'))) {
+      console.error('  ERROR: GameConfig.demo is set but demo/dist/index.html not found.');
+      console.error('  Build your demo site first: cd demo && npm run build');
+      process.exit(1);
+    }
+    hasDemo = true;
+    console.log('  Demo site found at demo/dist/');
+  }
+
+  // Step 9: Generate manifest
   const manifest = generateManifest(config as Parameters<typeof generateManifest>[0]);
 
-  // Step 9: Create zip
+  // Step 10: Create zip
   const zipPath = path.join(distDir, `${gameId}.zip`);
   console.log(`\nPackaging to ${gameId}.zip...`);
 
@@ -166,6 +181,11 @@ export async function packCommand(projectDir: string): Promise<void> {
     // Game custom assets
     for (const entry of gameAssetsResult.entries) {
       archive.file(entry.absolutePath, { name: `assets/${entry.relativePath}` });
+    }
+
+    // Demo site
+    if (hasDemo) {
+      archive.directory(demoDistDir, 'demo');
     }
 
     archive.finalize();

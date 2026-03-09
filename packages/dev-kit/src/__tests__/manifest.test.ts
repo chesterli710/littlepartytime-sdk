@@ -65,4 +65,20 @@ describe('generateManifest', () => {
     const manifest = generateManifest({ ...baseConfig, price: 9.99 });
     expect(manifest.price).toBe(9.99);
   });
+
+  it('should omit demo when undefined', () => {
+    const manifest = generateManifest(baseConfig);
+    expect(manifest).not.toHaveProperty('demo');
+  });
+
+  it('should include demo with entry path when defined', () => {
+    const manifest = generateManifest({
+      ...baseConfig,
+      demo: { title: 'Test Game — Demo' },
+    });
+    expect(manifest.demo).toEqual({
+      entry: 'demo/index.html',
+      title: 'Test Game — Demo',
+    });
+  });
 });

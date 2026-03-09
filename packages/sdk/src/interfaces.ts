@@ -22,6 +22,11 @@ export interface GameAssets {
   splash: string;
 }
 
+export interface GameDemo {
+  /** Title shown on the demo page (e.g. "奶酪大盗 — 游戏演示") */
+  title: string;
+}
+
 export interface GameConfig {
   name: string;
   description: string;
@@ -32,6 +37,8 @@ export interface GameConfig {
   version: string;
   sdkVersion: string;
   price?: number;
+  /** Optional demo site metadata. When present, `lpt-dev-kit pack` will look for `demo/dist/` and include it in the ZIP. */
+  demo?: GameDemo;
 }
 
 export interface GameEngine {
