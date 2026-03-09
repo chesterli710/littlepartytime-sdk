@@ -608,7 +608,7 @@ This command:
 3. Reads `GameConfig` from the built engine to extract metadata
 4. Validates the required image assets (format, dimensions, aspect ratio)
 5. Validates `rules.md` exists and is non-empty
-6. If `GameConfig.demo` is set, validates that `demo/dist/index.html` exists
+6. If `GameConfig.demo` is set, validates that `demo/dist/index.html` exists and uses relative paths (no absolute `src="/..."` or `href="/..."` references)
 7. Generates `manifest.json` from your config
 8. Creates a `.zip` file in the `dist/` directory containing code, manifest, rules, images, and optional demo site
 
@@ -643,6 +643,22 @@ The `.zip` upload package contains:
 └── demo/          # Demo site (optional, only if GameConfig.demo is set)
     └── index.html
 ```
+
+### Demo Site Configuration
+
+If your game includes a demo site (`GameConfig.demo` is set), the demo SPA will be deployed to a CDN subdirectory (e.g. `games/{gameId}/demo/`). **You must set `base: './'` in the demo's Vite config** to ensure all asset references use relative paths. Absolute paths like `/assets/...` will resolve to the CDN root and cause 404 errors.
+
+```typescript
+// demo/vite.config.ts
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  base: "./",
+  // ... other config
+});
+```
+
+The `pack` command will check `demo/dist/index.html` for absolute path references and report an error if any are found.
 
 ### Configuration
 

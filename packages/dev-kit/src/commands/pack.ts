@@ -5,6 +5,7 @@ import archiver from 'archiver';
 import { validateBundle } from '../utils/validate-bundle';
 import { validateAssets, ASSET_SPECS } from '../utils/validate-assets';
 import { validateGameAssets } from '../utils/validate-game-assets';
+import { validateDemo } from '../utils/validate-demo';
 import { generateManifest, getExtension } from '../utils/manifest';
 
 export async function packCommand(projectDir: string): Promise<void> {
@@ -137,11 +138,15 @@ export async function packCommand(projectDir: string): Promise<void> {
   let hasDemo = false;
 
   if (demo) {
-    if (!fs.existsSync(demoDistDir) || !fs.existsSync(path.join(demoDistDir, 'index.html'))) {
-      console.error('  ERROR: GameConfig.demo is set but demo/dist/index.html not found.');
-      console.error('  Build your demo site first: cd demo && npm run build');
+    const demoResult = validateDemo(demoDistDir);
+
+    if (!demoResult.valid) {
+      for (const error of demoResult.errors) {
+        console.error(`  ERROR: ${error}`);
+      }
       process.exit(1);
     }
+
     hasDemo = true;
     console.log('  Demo site found at demo/dist/');
   }
