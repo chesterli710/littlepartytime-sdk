@@ -70,7 +70,7 @@ export function loadEngineFromPath(enginePath: string): GameEngine {
   // Temporarily patch Module._resolveFilename so that when engine.cjs
   // does require('react/jsx-runtime'), Node falls back to dev-kit's
   // node_modules (the engine is extracted to a temp dir with no deps).
-  const devKitNodeModules = path.resolve(__dirname, '..', 'node_modules');
+  const devKitNodeModules = path.resolve(__dirname, '..', '..', 'node_modules');
   const originalResolve = (Module as any)._resolveFilename;
   (Module as any)._resolveFilename = function (request: string, parent: any, isMain: boolean, options: any) {
     try {
