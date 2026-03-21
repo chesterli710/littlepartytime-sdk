@@ -1,13 +1,14 @@
 // packages/dev-kit/src/server/socket-server.ts
 import { Server } from 'socket.io';
 import http from 'http';
-import { loadEngine, clearEngineCache, getEngine } from './engine-loader';
+import { loadEngine, clearEngineCache, getEngine, loadEngineFromPath } from './engine-loader';
 import { createSandboxedEngine } from './sandbox-guard';
 import * as GameRoom from './game-room';
 
 export interface SocketServerOptions {
   port: number;
-  projectDir: string;
+  projectDir?: string;   // For dev mode
+  enginePath?: string;    // For play mode (loads from arbitrary path)
   onStateChange?: (room: GameRoom.GameRoom) => void;
   onLog?: (message: string) => void;
 }
@@ -17,6 +18,7 @@ export function createSocketServer(options: SocketServerOptions): {
   io: Server;
   getRoom: () => GameRoom.GameRoom;
   reloadEngine: () => void;
+  swapEngine: (newEnginePath: string) => void;
 } {
   const { port, projectDir, onStateChange, onLog } = options;
 
@@ -26,8 +28,17 @@ export function createSocketServer(options: SocketServerOptions): {
   };
 
   // Load engine with sandbox guard
-  let engine = createSandboxedEngine(loadEngine(projectDir));
-  log(`Engine loaded from ${projectDir}`);
+  let engine: ReturnType<typeof createSandboxedEngine> | null;
+  if (options.enginePath) {
+    engine = createSandboxedEngine(loadEngineFromPath(options.enginePath));
+    log(`Engine loaded from ${options.enginePath}`);
+  } else if (options.projectDir) {
+    engine = createSandboxedEngine(loadEngine(options.projectDir));
+    log(`Engine loaded from ${options.projectDir}`);
+  } else {
+    engine = null;
+    log('Started without engine (play mode)');
+  }
 
   // Create room
   const room = GameRoom.createRoom('dev-game');
@@ -101,7 +112,7 @@ export function createSocketServer(options: SocketServerOptions): {
     onStateChange?.(room);
 
     // Send current game state to reconnecting player
-    if ((room.phase === 'playing' || room.phase === 'ended') && room.state) {
+    if (engine && (room.phase === 'playing' || room.phase === 'ended') && room.state) {
       const view = engine.getPlayerView(room.state, player.id);
       socket.emit('game:state', view);
     }
@@ -121,6 +132,7 @@ export function createSocketServer(options: SocketServerOptions): {
     socket.on('game:start', () => {
       if (!player.isHost) return;
       if (!GameRoom.allPlayersReady(room)) return;
+      if (!engine) { log('No engine loaded'); return; }
 
       GameRoom.startGame(room, engine);
       log(`Game started!`);
@@ -144,6 +156,7 @@ export function createSocketServer(options: SocketServerOptions): {
     // Game action
     socket.on('game:action', (action: any) => {
       if (room.phase !== 'playing' && room.phase !== 'ended') return;
+      if (!engine) return;
 
       log(`${player.nickname} action: ${JSON.stringify(action)}`);
       GameRoom.handleAction(room, engine, player.id, action);
@@ -246,9 +259,16 @@ export function createSocketServer(options: SocketServerOptions): {
     io,
     getRoom: () => room,
     reloadEngine: () => {
+      if (!options.projectDir) return;
       clearEngineCache();
-      engine = createSandboxedEngine(loadEngine(projectDir));
+      engine = createSandboxedEngine(loadEngine(options.projectDir));
       log(`Engine reloaded`);
+    },
+    swapEngine: (newEnginePath: string) => {
+      engine = createSandboxedEngine(loadEngineFromPath(newEnginePath));
+      GameRoom.resetAll(room);
+      io.disconnectSockets(true);
+      log(`Engine swapped to ${newEnginePath}`);
     },
   };
 }
