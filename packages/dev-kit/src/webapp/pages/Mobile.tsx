@@ -21,49 +21,20 @@ const gameOuterStyle: React.CSSProperties = {
 };
 
 /**
- * Diagnostic: track viewport values for debugging keyboard/layout issues.
- * Shows a small overlay on screen with real-time values.
- * TODO: Remove after debugging is complete.
+ * Diagnostic hook — TODO: remove after debugging.
+ * Uses VisualViewport to detect keyboard and switch between
+ * pixel height (keyboard open) and 100dvh (keyboard closed).
  */
-interface ViewportDebug {
-  height: string;
-  debug: {
-    vvHeight: number;
-    vvOffsetTop: number;
-    innerHeight: number;
-    documentHeight: number;
-    scrollY: number;
-    rootHeight: number;
-  };
-}
-
-function useViewportHeight(): ViewportDebug {
+function useViewportHeight() {
   const [height, setHeight] = useState('100dvh');
-  const [debug, setDebug] = useState({
-    vvHeight: 0, vvOffsetTop: 0, innerHeight: 0,
-    documentHeight: 0, scrollY: 0, rootHeight: 0,
-  });
   const initialHeight = useRef(0);
 
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-
     initialHeight.current = vv.height;
-
     const KEYBOARD_THRESHOLD = 100;
-
     const update = () => {
-      const root = document.getElementById('root');
-      setDebug({
-        vvHeight: Math.round(vv.height),
-        vvOffsetTop: Math.round(vv.offsetTop),
-        innerHeight: window.innerHeight,
-        documentHeight: document.documentElement.clientHeight,
-        scrollY: Math.round(window.scrollY),
-        rootHeight: root ? root.clientHeight : 0,
-      });
-
       window.scrollTo(0, 0);
       const shrunk = initialHeight.current - vv.height;
       if (shrunk > KEYBOARD_THRESHOLD) {
@@ -72,8 +43,6 @@ function useViewportHeight(): ViewportDebug {
         setHeight('100dvh');
       }
     };
-
-    update();
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);
     return () => {
@@ -82,18 +51,60 @@ function useViewportHeight(): ViewportDebug {
     };
   }, []);
 
-  return { height, debug };
+  return height;
 }
 
-const debugOverlayStyle: React.CSSProperties = {
-  position: 'fixed', bottom: 0, left: 0, right: 0,
-  background: 'rgba(0,0,0,0.85)', color: '#0f0',
-  fontSize: 10, fontFamily: 'monospace', padding: 4,
-  zIndex: 99999, pointerEvents: 'none', lineHeight: 1.4,
-};
+/**
+ * Debug overlay that measures each container layer on every render.
+ * Ref-based: reads computed sizes of actual DOM elements.
+ */
+function DebugOverlay({ containerRef, outerRef, sandboxRef }: {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  outerRef: React.RefObject<HTMLDivElement | null>;
+  sandboxRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const [info, setInfo] = useState('');
+
+  useEffect(() => {
+    const measure = () => {
+      const c = containerRef.current;
+      const o = outerRef.current;
+      const s = sandboxRef.current;
+      const gameEl = s?.firstElementChild as HTMLElement | null;
+      const vv = window.visualViewport;
+
+      const lines = [
+        `vv:${vv ? Math.round(vv.height) : '?'} inner:${window.innerHeight} scrollY:${Math.round(window.scrollY)}`,
+        `container:${c?.clientHeight ?? '?'} computedH:${c ? getComputedStyle(c).height : '?'}`,
+        `outer:${o?.clientHeight ?? '?'} scrollTop:${o?.scrollTop ?? '?'} scrollH:${o?.scrollHeight ?? '?'}`,
+        `sandbox:${s?.clientHeight ?? '?'} game1st:${gameEl?.clientHeight ?? '?'}`,
+      ];
+      setInfo(lines.join('\n'));
+    };
+
+    measure();
+    const id = setInterval(measure, 500);
+    return () => clearInterval(id);
+  }, [containerRef, outerRef, sandboxRef]);
+
+  return (
+    <div style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0,
+      background: 'rgba(0,0,0,0.85)', color: '#0f0',
+      fontSize: 10, fontFamily: 'monospace', padding: 4,
+      zIndex: 99999, pointerEvents: 'none', lineHeight: 1.4,
+      whiteSpace: 'pre',
+    }}>
+      {info}
+    </div>
+  );
+}
 
 export default function Mobile() {
-  const { height: viewportHeight, debug } = useViewportHeight();
+  const viewportHeight = useViewportHeight();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const outerRef = useRef<HTMLDivElement>(null);
+  const sandboxRef = useRef<HTMLDivElement>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [nickname, setNickname] = useState('');
   const [joined, setJoined] = useState(false);
@@ -247,9 +258,9 @@ export default function Mobile() {
 
   // Game — mirrors platform container structure
   return (
-    <div style={{ ...baseStyle, height: viewportHeight }}>
-      <div style={gameOuterStyle}>
-        <div className="game-sandbox">
+    <div ref={containerRef} style={{ ...baseStyle, height: viewportHeight }}>
+      <div ref={outerRef} style={gameOuterStyle}>
+        <div ref={sandboxRef} className="game-sandbox">
           {gameOver ? (
             <PlatformTakeover
               result={gameResult}
@@ -263,10 +274,7 @@ export default function Mobile() {
           )}
         </div>
       </div>
-      {/* DEBUG: viewport diagnostic overlay — remove after fixing */}
-      <div style={debugOverlayStyle}>
-        container: {viewportHeight} | vv: {debug.vvHeight} | vvOff: {debug.vvOffsetTop} | inner: {debug.innerHeight} | doc: {debug.documentHeight} | scrollY: {debug.scrollY} | root: {debug.rootHeight}
-      </div>
+      <DebugOverlay containerRef={containerRef} outerRef={outerRef} sandboxRef={sandboxRef} />
     </div>
   );
 }
