@@ -22,25 +22,38 @@ const gameOuterStyle: React.CSSProperties = {
 
 /**
  * Track actual visible height via VisualViewport API.
- * On iOS Safari, 100dvh does NOT shrink when the keyboard opens (unlike
- * PWA/Capacitor where the platform runs). VisualViewport.height gives
- * the real available space, achieving the same behavior: game content
- * compresses instead of the page being pushed off-screen.
+ *
+ * On iOS Safari (non-PWA), 100dvh does NOT shrink when the keyboard opens.
+ * We use visualViewport.height to detect the keyboard and override the
+ * container height only while it's open. When the keyboard closes, we
+ * revert to 100dvh so Safari toolbar/address bar changes don't leave
+ * a dead zone at the bottom.
  */
 function useViewportHeight(): string {
   const [height, setHeight] = useState('100dvh');
+  const initialHeight = useRef(0);
 
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
 
+    // Capture the full viewport height on first load (no keyboard)
+    initialHeight.current = vv.height;
+
+    const KEYBOARD_THRESHOLD = 100; // px — if viewport shrinks by more than this, keyboard is open
+
     const update = () => {
-      // Pin to top: counteract Safari scrolling the page up
       window.scrollTo(0, 0);
-      setHeight(`${vv.height}px`);
+      const shrunk = initialHeight.current - vv.height;
+      if (shrunk > KEYBOARD_THRESHOLD) {
+        // Keyboard is open: use exact pixel height so content compresses
+        setHeight(`${vv.height}px`);
+      } else {
+        // Keyboard is closed: use 100dvh to fill the screen fully
+        setHeight('100dvh');
+      }
     };
 
-    update();
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);
     return () => {
