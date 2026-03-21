@@ -287,7 +287,7 @@ export default function Play() {
   // Mobile: fullscreen game, no PhoneFrame or dev controls
   if (isMobile) {
     return (
-      <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+      <div style={{ width: '100vw', height: '100dvh', overflow: 'hidden', touchAction: 'none', position: 'fixed', top: 0, left: 0 }}>
         {gameContent}
       </div>
     );
