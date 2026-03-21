@@ -1,8 +1,6 @@
 // packages/dev-kit/src/webapp/components/GameSelector.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 
-declare const __SOCKET_PORT__: number;
-
 interface GameInfo {
   id: string;
   name: string;
