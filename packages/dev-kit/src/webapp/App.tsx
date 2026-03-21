@@ -6,10 +6,12 @@ import Play from './pages/Play';
 import Debug from './pages/Debug';
 import Mobile from './pages/Mobile';
 import { captureScreen } from './utils/captureScreen';
+import QrModal from './components/QrModal';
 
 type Page = 'preview' | 'play' | 'debug' | 'mobile';
 
 export default function App() {
+  const [showQr, setShowQr] = useState(false);
   const [page, setPage] = useState<Page>(() => {
     const path = window.location.pathname;
     if (path === '/m' || path === '/m/') return 'mobile';
@@ -64,6 +66,21 @@ export default function App() {
         ))}
         <div style={{ flex: 1 }} />
         <button
+          onClick={() => setShowQr(true)}
+          className="dk-nav-btn"
+          style={{
+            padding: '4px 12px',
+            borderRadius: 4,
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: 14,
+            background: 'transparent',
+            color: '#a1a1aa',
+          }}
+        >
+          Mobile
+        </button>
+        <button
           onClick={() => fetch(`http://${window.location.hostname}:${__SOCKET_PORT__}/api/reset`, { method: 'POST' })}
           className="dk-nav-btn"
           style={{
@@ -86,6 +103,13 @@ export default function App() {
         {page === 'play' && <Play />}
         {page === 'debug' && <Debug />}
       </main>
+
+      {showQr && (
+        <QrModal
+          url={`http://${window.location.hostname}:${window.location.port}/m`}
+          onClose={() => setShowQr(false)}
+        />
+      )}
     </div>
   );
 }
