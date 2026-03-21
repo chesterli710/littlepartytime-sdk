@@ -5,13 +5,7 @@ import PlatformTakeover from '../components/PlatformTakeover';
 declare const __SOCKET_PORT__: number;
 declare const __DEV_KIT_MODE__: string;
 
-/**
- * Root container mirrors the platform's room page:
- *   <div class="h-[100dvh] flex flex-col overflow-hidden">
- * No position:fixed — uses 100dvh which shrinks with mobile keyboard.
- */
-const rootStyle: React.CSSProperties = {
-  height: '100dvh',
+const baseStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',
@@ -20,17 +14,46 @@ const rootStyle: React.CSSProperties = {
   fontFamily: 'system-ui, -apple-system, sans-serif',
 };
 
-/**
- * Game outer wrapper mirrors the platform's flex-1 scrollable area:
- *   <div class="flex-1 min-h-0 overflow-y-auto">
- */
 const gameOuterStyle: React.CSSProperties = {
   flex: 1,
   minHeight: 0,
   overflowY: 'auto',
 };
 
+/**
+ * Track actual visible height via VisualViewport API.
+ * On iOS Safari, 100dvh does NOT shrink when the keyboard opens (unlike
+ * PWA/Capacitor where the platform runs). VisualViewport.height gives
+ * the real available space, achieving the same behavior: game content
+ * compresses instead of the page being pushed off-screen.
+ */
+function useViewportHeight(): string {
+  const [height, setHeight] = useState('100dvh');
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const update = () => {
+      // Pin to top: counteract Safari scrolling the page up
+      window.scrollTo(0, 0);
+      setHeight(`${vv.height}px`);
+    };
+
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, []);
+
+  return height;
+}
+
 export default function Mobile() {
+  const viewportHeight = useViewportHeight();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [nickname, setNickname] = useState('');
   const [joined, setJoined] = useState(false);
@@ -121,7 +144,7 @@ export default function Mobile() {
   // Join screen
   if (!joined) {
     return (
-      <div style={{ ...rootStyle, alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ ...baseStyle, height: viewportHeight, alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ width: '85%', maxWidth: 320 }}>
           <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16, textAlign: 'center' }}>Join Game</h2>
           <input
@@ -146,7 +169,7 @@ export default function Mobile() {
   // Lobby
   if (room.phase === 'lobby' || room.phase === 'ready') {
     return (
-      <div style={{ ...rootStyle, padding: 16 }}>
+      <div style={{ ...baseStyle, height: viewportHeight, padding: 16 }}>
         <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>Lobby</h2>
         <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
           {room.players.map((p: any) => (
@@ -187,7 +210,7 @@ export default function Mobile() {
   //     div.flex-1.min-h-0.overflow-y-auto           (game outer)
   //       div.game-sandbox                            (safe area padding)
   return (
-    <div style={rootStyle}>
+    <div style={{ ...baseStyle, height: viewportHeight }}>
       <div style={gameOuterStyle}>
         <div className="game-sandbox">
           {gameOver ? (
