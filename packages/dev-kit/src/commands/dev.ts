@@ -167,6 +167,7 @@ export async function devCommand(projectDir: string, options: DevOptions = {}): 
     define: {
       __SOCKET_PORT__: JSON.stringify(socketPort),
       __DEV_KIT_MODE__: JSON.stringify('dev'),
+      __LAN_IP__: JSON.stringify(getLanAddress() || ''),
     },
     resolve: {
       alias: {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Preview from './pages/Preview';
 
 declare const __SOCKET_PORT__: number;
+declare const __LAN_IP__: string;
 import Play from './pages/Play';
 import Debug from './pages/Debug';
 import Mobile from './pages/Mobile';
@@ -64,7 +65,6 @@ export default function App() {
             {p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
         ))}
-        <div style={{ flex: 1 }} />
         <button
           onClick={() => setShowQr(true)}
           className="dk-nav-btn"
@@ -80,6 +80,7 @@ export default function App() {
         >
           Mobile
         </button>
+        <div style={{ flex: 1 }} />
         <button
           onClick={() => fetch(`http://${window.location.hostname}:${__SOCKET_PORT__}/api/reset`, { method: 'POST' })}
           className="dk-nav-btn"
@@ -106,7 +107,7 @@ export default function App() {
 
       {showQr && (
         <QrModal
-          url={`http://${window.location.hostname}:${window.location.port}/m`}
+          url={`http://${__LAN_IP__ || window.location.hostname}:${window.location.port}/m`}
           onClose={() => setShowQr(false)}
         />
       )}

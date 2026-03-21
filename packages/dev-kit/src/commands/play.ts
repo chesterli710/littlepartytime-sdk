@@ -128,6 +128,7 @@ export async function playCommand(options: PlayOptions = {}): Promise<void> {
     define: {
       __SOCKET_PORT__: JSON.stringify(socketPort),
       __DEV_KIT_MODE__: JSON.stringify('play'),
+      __LAN_IP__: JSON.stringify(getLanAddress() || ''),
     },
   });
 
