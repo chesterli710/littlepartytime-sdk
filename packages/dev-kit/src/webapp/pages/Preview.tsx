@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import PhoneFrame from '../components/PhoneFrame';
 import PlatformTakeover from '../components/PlatformTakeover';
 import { captureScreen, downloadScreenshot } from '../utils/captureScreen';
+import GameSelector from '../components/GameSelector';
+
+declare const __DEV_KIT_MODE__: string;
 
 const PLAYER_NAMES = ['Alice', 'Bob', 'Carol', 'Dave', 'Eve', 'Frank', 'Grace', 'Heidi'];
 
@@ -32,6 +35,7 @@ export default function Preview() {
   const playerIndexRef = useRef(playerIndex);
   playerIndexRef.current = playerIndex;
   const stateUpdateListeners = useRef<Set<(...args: unknown[]) => void>>(new Set());
+  const [activeGameId, setActiveGameId] = useState<string | null>(null);
 
   // Generate mock players
   const mockPlayers = useMemo(() => {
@@ -50,30 +54,59 @@ export default function Preview() {
   const minPlayers = config?.minPlayers ?? 2;
   const maxPlayers = config?.maxPlayers ?? 32;
 
+  // Fetch active game ID on mount (play mode only)
+  useEffect(() => {
+    if (__DEV_KIT_MODE__ !== 'play') return;
+    const fetchActive = async () => {
+      try {
+        const res = await fetch(`http://${window.location.hostname}:${window.location.port}/api/games`);
+        const data = await res.json();
+        if (data.activeGameId) setActiveGameId(data.activeGameId);
+      } catch { /* ignore */ }
+    };
+    fetchActive();
+  }, []);
+
   // Load renderer, engine, and config dynamically
   useEffect(() => {
-    import('/src/index.ts').then((mod) => {
-      setGameRenderer(() => mod.Renderer || mod.default);
-      if (mod.engine) {
-        setEngine(mod.engine);
-      }
-      if (mod.config) {
-        setConfig(mod.config);
-        setPlayerCount(mod.config.minPlayers ?? 3);
-      } else {
+    if (__DEV_KIT_MODE__ === 'play') {
+      if (!activeGameId) return;
+      import(/* @vite-ignore */ `virtual:active-game?id=${activeGameId}&t=${Date.now()}`)
+        .then((mod) => {
+          setGameRenderer(() => mod.Renderer || mod.default);
+          if (mod.engine) setEngine(mod.engine);
+          if (mod.config) {
+            setConfig(mod.config);
+            setPlayerCount(mod.config.minPlayers ?? 3);
+          } else {
+            setPlayerCount(3);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load game module:', err);
+          setPlayerCount(3);
+        });
+    } else {
+      import('/src/index.ts').then((mod) => {
+        setGameRenderer(() => mod.Renderer || mod.default);
+        if (mod.engine) {
+          setEngine(mod.engine);
+        }
+        if (mod.config) {
+          setConfig(mod.config);
+          setPlayerCount(mod.config.minPlayers ?? 3);
+        } else {
+          setPlayerCount(3);
+        }
+      }).catch((err) => {
+        console.error('Failed to load game module:', err);
         setPlayerCount(3);
-      }
-    }).catch((err) => {
-      console.error('Failed to load game module:', err);
-      setPlayerCount(3);
-      // Fallback: try loading renderer directly
-      import('/src/renderer.tsx').then((mod) => {
-        setGameRenderer(() => mod.default || mod.Renderer);
-      }).catch((err2) => {
-        console.error('Failed to load renderer:', err2);
+        import('/src/renderer.tsx').then((mod) => {
+          setGameRenderer(() => mod.default || mod.Renderer);
+        }).catch(console.error);
       });
-    });
-  }, []);
+    }
+  }, [activeGameId]);
 
   // Initialize game when engine loads or player count changes
   useEffect(() => {
@@ -143,13 +176,31 @@ export default function Preview() {
       reportResult: (result: any) => {
         console.log('Game result reported:', result);
       },
-      getAssetUrl: (assetPath: string) => `/assets/${assetPath}`,
+      getAssetUrl: (assetPath: string) =>
+        __DEV_KIT_MODE__ === 'play'
+          ? `/api/games/active/assets/${assetPath}`
+          : `/assets/${assetPath}`,
       getDeviceCapabilities: () => ({ haptics: false, motion: false }),
       haptic: () => {},
       onShake: () => () => {},
       onTilt: () => () => {},
     };
   }, [engine]);
+
+  const handleGameActivated = useCallback(async () => {
+    setGameRenderer(null);
+    setEngine(null);
+    setFullState(null);
+    setViewState(null);
+    setGameOver(false);
+    setGameResult(null);
+    setActions([]);
+    try {
+      const res = await fetch(`http://${window.location.hostname}:${window.location.port}/api/games`);
+      const data = await res.json();
+      if (data.activeGameId) setActiveGameId(data.activeGameId);
+    } catch { /* ignore */ }
+  }, []);
 
   // Apply manual state override from JSON editor
   const applyState = useCallback(() => {
@@ -218,225 +269,228 @@ export default function Preview() {
   }, [capturing]);
 
   return (
-    <div style={{ display: 'flex', gap: 16, height: 'calc(100vh - 80px)' }}>
-      {/* Renderer — half the screen width */}
-      <div style={{ width: '50%', height: '100%', position: 'relative' }}>
-        <PhoneFrame>
-          {gameOver && gameResult ? (
-            <PlatformTakeover result={gameResult} players={mockPlayers} onReturn={resetGame} />
-          ) : GameRenderer && platform && viewState ? (
-            <GameRenderer key={mockPlayers[playerIndex].id} platform={platform} state={viewState} />
-          ) : (
-            <div style={{ padding: 16, color: '#71717a' }}>
-              {!engine ? 'Loading engine...' : 'Initializing game...'}
-            </div>
-          )}
-        </PhoneFrame>
-        {/* Screenshot button — floats below the centered phone */}
-        <button
-          onClick={handleScreenshot}
-          disabled={capturing}
-          title="Capture game screen (without phone frame)"
-          style={{
-            position: 'absolute',
-            bottom: 12,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '5px 14px',
-            borderRadius: 6,
-            border: '1px solid #3f3f46',
-            background: capturing ? '#27272a' : '#18181b',
-            color: capturing ? '#71717a' : '#a1a1aa',
-            fontSize: 13,
-            cursor: capturing ? 'default' : 'pointer',
-            transition: 'background 0.15s, color 0.15s',
-            zIndex: 10,
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-            <circle cx="12" cy="13" r="4"/>
-          </svg>
-          {capturing ? 'Capturing...' : 'Screenshot'}
-        </button>
-      </div>
-
-      {/* Control Panel — fills remaining width, resizable two-column */}
-      <div ref={panelRef} style={{ flex: 1, minWidth: 0, display: 'flex', height: '100%' }}>
-        {/* Left column: Players & Controls */}
-        <div style={{ width: `${splitRatio * 100}%`, display: 'flex', flexDirection: 'column', gap: 16, overflow: 'auto', paddingRight: 4 }}>
-          {/* Player Count */}
-          <div style={card}>
-            <h3 style={label}>Player Count</h3>
-            <input
-              type="number"
-              min={minPlayers}
-              max={maxPlayers}
-              value={playerCount ?? ''}
-              onChange={(e) => setPlayerCount(Math.max(minPlayers, Math.min(maxPlayers, Number(e.target.value))))}
-              className="dk-input"
-              style={inputBase}
-            />
-          </div>
-
-          {/* Player Switcher */}
-          <div style={{ ...card, flex: 1, overflow: 'auto' }}>
-            <h3 style={label}>Current Player</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {mockPlayers.map((p, i) => {
-                const isActive = i === playerIndex;
-                const hue = (i * 137) % 360; // deterministic color per player
-                const playerState = fullState?.players?.find((ps: any) => ps.id === p.id);
-                // Fallback chain: 1) PlayerState field  2) GameState.data mapping table
-                const ROLE_KEYS = ['role', 'character', 'team', 'class', 'job', 'faction', 'type'];
-                const DATA_MAP_KEYS = ['playerRoles', 'roles', 'playerCharacters', 'characters', 'playerTeams', 'teams'];
-                let roleLabel: string | undefined;
-                // Try PlayerState direct field
-                if (playerState) {
-                  const entry = Object.entries(playerState).find(([k]) => ROLE_KEYS.includes(k.toLowerCase()));
-                  if (entry) roleLabel = String(entry[1]);
-                }
-                // Try GameState.data lookup table
-                if (!roleLabel && fullState?.data) {
-                  for (const mapKey of DATA_MAP_KEYS) {
-                    const map = fullState.data[mapKey];
-                    if (map && typeof map === 'object' && !Array.isArray(map)) {
-                      const val = (map as Record<string, unknown>)[p.id];
-                      if (val != null) { roleLabel = String(val); break; }
-                    }
-                  }
-                }
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => setPlayerIndex(i)}
-                    className={isActive ? '' : 'dk-player-btn'}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '6px 8px',
-                      borderRadius: 4,
-                      fontSize: 13,
-                      textAlign: 'left' as const,
-                      border: 'none',
-                      cursor: 'pointer',
-                      ...(isActive
-                        ? { background: 'rgba(217, 119, 6, 0.2)', boxShadow: 'inset 0 0 0 1px #f59e0b', color: '#fff' }
-                        : { background: '#27272a', color: '#d4d4d8' }),
-                    }}
-                  >
-                    {/* Avatar */}
-                    <div
-                      style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 11,
-                        fontWeight: 700,
-                        flexShrink: 0,
-                        background: `hsl(${hue}, 55%, 45%)`,
-                      }}
-                    >
-                      {p.nickname[0]}
-                    </div>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nickname}</span>
-                        {p.isHost && (
-                          <span style={{ fontSize: 10, color: '#fbbf24', flexShrink: 0 }}>HOST</span>
-                        )}
-                      </div>
-                      {roleLabel && (
-                        <div style={{ fontSize: 10, color: '#71717a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {roleLabel}
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Game Result (shown in PhoneFrame as Platform Takeover) */}
-          {gameOver && gameResult && (
-            <div style={card}>
-              <h3 style={{ ...label, color: '#4ade80' }}>Game Over</h3>
-              <button
-                onClick={resetGame}
-                className="dk-btn-amber"
-                style={{ ...btnAmber, width: '100%' }}
-              >
-                Reset Game
-              </button>
-            </div>
-          )}
-
-          {/* Reset button (when game is not over) */}
-          {!gameOver && engine && (
-            <div style={card}>
-              <button
-                onClick={resetGame}
-                className="dk-btn-zinc"
-                style={btnZinc}
-              >
-                Reset Game
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Drag handle */}
-        <div
-          className="dk-resize-bar"
-          style={{ flexShrink: 0, width: 8, cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onMouseDown={() => { dragging.current = true; document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none'; }}
-        >
-          <div className="dk-resize-line" style={{ width: 2, height: 32, background: '#3f3f46', borderRadius: 2 }} />
-        </div>
-
-        {/* Right column: State & Logs */}
-        <div style={{ width: `${(1 - splitRatio) * 100}%`, display: 'flex', flexDirection: 'column', gap: 16, overflow: 'auto', paddingLeft: 4 }}>
-          {/* State Editor */}
-          <div style={{ ...card, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <h3 style={label}>Game State (Full)</h3>
-            <textarea
-              value={stateJson}
-              onChange={(e) => setStateJson(e.target.value)}
-              className="dk-input"
-              style={{ flex: 1, background: '#27272a', border: '1px solid #3f3f46', borderRadius: 4, padding: 8, fontFamily: 'monospace', fontSize: 11, resize: 'none', minHeight: 120, color: '#e5e5e5' }}
-            />
-            <button
-              onClick={applyState}
-              className="dk-btn-amber"
-              style={{ ...btnAmber, marginTop: 8 }}
-            >
-              Apply State
-            </button>
-          </div>
-
-          {/* Action Log */}
-          <div style={{ ...card, height: 192, overflow: 'auto' }}>
-            <h3 style={label}>Action Log</h3>
-            {actions.length === 0 ? (
-              <p style={{ color: '#71717a', fontSize: 11 }}>No actions yet</p>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)' }}>
+      {__DEV_KIT_MODE__ === 'play' && <GameSelector onGameActivated={handleGameActivated} />}
+      <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
+        {/* Renderer — half the screen width */}
+        <div style={{ width: '50%', height: '100%', position: 'relative' }}>
+          <PhoneFrame>
+            {gameOver && gameResult ? (
+              <PlatformTakeover result={gameResult} players={mockPlayers} onReturn={resetGame} />
+            ) : GameRenderer && platform && viewState ? (
+              <GameRenderer key={mockPlayers[playerIndex].id} platform={platform} state={viewState} />
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {actions.map((a, i) => (
-                  <div key={i} style={{ fontSize: 11, fontFamily: 'monospace', background: '#27272a', borderRadius: 4, padding: 4 }}>
-                    <span style={{ color: '#fbbf24' }}>{a.player}</span>: {JSON.stringify(a.action)}
-                  </div>
-                ))}
+              <div style={{ padding: 16, color: '#71717a' }}>
+                {!engine ? 'Loading engine...' : 'Initializing game...'}
               </div>
             )}
+          </PhoneFrame>
+          {/* Screenshot button — floats below the centered phone */}
+          <button
+            onClick={handleScreenshot}
+            disabled={capturing}
+            title="Capture game screen (without phone frame)"
+            style={{
+              position: 'absolute',
+              bottom: 12,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '5px 14px',
+              borderRadius: 6,
+              border: '1px solid #3f3f46',
+              background: capturing ? '#27272a' : '#18181b',
+              color: capturing ? '#71717a' : '#a1a1aa',
+              fontSize: 13,
+              cursor: capturing ? 'default' : 'pointer',
+              transition: 'background 0.15s, color 0.15s',
+              zIndex: 10,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            {capturing ? 'Capturing...' : 'Screenshot'}
+          </button>
+        </div>
+
+        {/* Control Panel — fills remaining width, resizable two-column */}
+        <div ref={panelRef} style={{ flex: 1, minWidth: 0, display: 'flex', height: '100%' }}>
+          {/* Left column: Players & Controls */}
+          <div style={{ width: `${splitRatio * 100}%`, display: 'flex', flexDirection: 'column', gap: 16, overflow: 'auto', paddingRight: 4 }}>
+            {/* Player Count */}
+            <div style={card}>
+              <h3 style={label}>Player Count</h3>
+              <input
+                type="number"
+                min={minPlayers}
+                max={maxPlayers}
+                value={playerCount ?? ''}
+                onChange={(e) => setPlayerCount(Math.max(minPlayers, Math.min(maxPlayers, Number(e.target.value))))}
+                className="dk-input"
+                style={inputBase}
+              />
+            </div>
+
+            {/* Player Switcher */}
+            <div style={{ ...card, flex: 1, overflow: 'auto' }}>
+              <h3 style={label}>Current Player</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {mockPlayers.map((p, i) => {
+                  const isActive = i === playerIndex;
+                  const hue = (i * 137) % 360; // deterministic color per player
+                  const playerState = fullState?.players?.find((ps: any) => ps.id === p.id);
+                  // Fallback chain: 1) PlayerState field  2) GameState.data mapping table
+                  const ROLE_KEYS = ['role', 'character', 'team', 'class', 'job', 'faction', 'type'];
+                  const DATA_MAP_KEYS = ['playerRoles', 'roles', 'playerCharacters', 'characters', 'playerTeams', 'teams'];
+                  let roleLabel: string | undefined;
+                  // Try PlayerState direct field
+                  if (playerState) {
+                    const entry = Object.entries(playerState).find(([k]) => ROLE_KEYS.includes(k.toLowerCase()));
+                    if (entry) roleLabel = String(entry[1]);
+                  }
+                  // Try GameState.data lookup table
+                  if (!roleLabel && fullState?.data) {
+                    for (const mapKey of DATA_MAP_KEYS) {
+                      const map = fullState.data[mapKey];
+                      if (map && typeof map === 'object' && !Array.isArray(map)) {
+                        const val = (map as Record<string, unknown>)[p.id];
+                        if (val != null) { roleLabel = String(val); break; }
+                      }
+                    }
+                  }
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => setPlayerIndex(i)}
+                      className={isActive ? '' : 'dk-player-btn'}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '6px 8px',
+                        borderRadius: 4,
+                        fontSize: 13,
+                        textAlign: 'left' as const,
+                        border: 'none',
+                        cursor: 'pointer',
+                        ...(isActive
+                          ? { background: 'rgba(217, 119, 6, 0.2)', boxShadow: 'inset 0 0 0 1px #f59e0b', color: '#fff' }
+                          : { background: '#27272a', color: '#d4d4d8' }),
+                      }}
+                    >
+                      {/* Avatar */}
+                      <div
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 11,
+                          fontWeight: 700,
+                          flexShrink: 0,
+                          background: `hsl(${hue}, 55%, 45%)`,
+                        }}
+                      >
+                        {p.nickname[0]}
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nickname}</span>
+                          {p.isHost && (
+                            <span style={{ fontSize: 10, color: '#fbbf24', flexShrink: 0 }}>HOST</span>
+                          )}
+                        </div>
+                        {roleLabel && (
+                          <div style={{ fontSize: 10, color: '#71717a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {roleLabel}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Game Result (shown in PhoneFrame as Platform Takeover) */}
+            {gameOver && gameResult && (
+              <div style={card}>
+                <h3 style={{ ...label, color: '#4ade80' }}>Game Over</h3>
+                <button
+                  onClick={resetGame}
+                  className="dk-btn-amber"
+                  style={{ ...btnAmber, width: '100%' }}
+                >
+                  Reset Game
+                </button>
+              </div>
+            )}
+
+            {/* Reset button (when game is not over) */}
+            {!gameOver && engine && (
+              <div style={card}>
+                <button
+                  onClick={resetGame}
+                  className="dk-btn-zinc"
+                  style={btnZinc}
+                >
+                  Reset Game
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Drag handle */}
+          <div
+            className="dk-resize-bar"
+            style={{ flexShrink: 0, width: 8, cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onMouseDown={() => { dragging.current = true; document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none'; }}
+          >
+            <div className="dk-resize-line" style={{ width: 2, height: 32, background: '#3f3f46', borderRadius: 2 }} />
+          </div>
+
+          {/* Right column: State & Logs */}
+          <div style={{ width: `${(1 - splitRatio) * 100}%`, display: 'flex', flexDirection: 'column', gap: 16, overflow: 'auto', paddingLeft: 4 }}>
+            {/* State Editor */}
+            <div style={{ ...card, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <h3 style={label}>Game State (Full)</h3>
+              <textarea
+                value={stateJson}
+                onChange={(e) => setStateJson(e.target.value)}
+                className="dk-input"
+                style={{ flex: 1, background: '#27272a', border: '1px solid #3f3f46', borderRadius: 4, padding: 8, fontFamily: 'monospace', fontSize: 11, resize: 'none', minHeight: 120, color: '#e5e5e5' }}
+              />
+              <button
+                onClick={applyState}
+                className="dk-btn-amber"
+                style={{ ...btnAmber, marginTop: 8 }}
+              >
+                Apply State
+              </button>
+            </div>
+
+            {/* Action Log */}
+            <div style={{ ...card, height: 192, overflow: 'auto' }}>
+              <h3 style={label}>Action Log</h3>
+              {actions.length === 0 ? (
+                <p style={{ color: '#71717a', fontSize: 11 }}>No actions yet</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {actions.map((a, i) => (
+                    <div key={i} style={{ fontSize: 11, fontFamily: 'monospace', background: '#27272a', borderRadius: 4, padding: 4 }}>
+                      <span style={{ color: '#fbbf24' }}>{a.player}</span>: {JSON.stringify(a.action)}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

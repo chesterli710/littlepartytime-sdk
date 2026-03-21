@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { io, Socket } from 'socket.io-client';
 import PhoneFrame from '../components/PhoneFrame';
 import PlatformTakeover from '../components/PlatformTakeover';
+import GameSelector from '../components/GameSelector';
 
 declare const __SOCKET_PORT__: number;
+declare const __DEV_KIT_MODE__: string;
 
 const card: React.CSSProperties = { background: '#18181b', borderRadius: 8, padding: 24 };
 const inputStyle: React.CSSProperties = { width: '100%', background: '#27272a', border: '1px solid #3f3f46', borderRadius: 4, padding: '8px 12px', marginBottom: 16, color: '#e5e5e5', fontSize: 14 };
@@ -18,18 +20,41 @@ export default function Play() {
   const [myId, setMyId] = useState<string | null>(null);
   const [GameRenderer, setGameRenderer] = useState<React.ComponentType<any> | null>(null);
   const [gameResult, setGameResult] = useState<any>(null);
+  const [activeGameId, setActiveGameId] = useState<string | null>(null);
 
   const isAutoMode = useMemo(() => new URLSearchParams(window.location.search).get('auto') === 'true', []);
   const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
   // Ref survives React Fast Refresh (HMR) but not new tabs — perfect for reconnect identity
   const assignedNicknameRef = useRef<string | null>(null);
 
+  // Fetch active game ID on mount (play mode only)
+  useEffect(() => {
+    if (__DEV_KIT_MODE__ !== 'play') return;
+    const fetchActive = async () => {
+      try {
+        const res = await fetch(`http://${window.location.hostname}:${window.location.port}/api/games`);
+        const data = await res.json();
+        if (data.activeGameId) setActiveGameId(data.activeGameId);
+      } catch { /* ignore */ }
+    };
+    fetchActive();
+  }, []);
+
   // Load renderer
   useEffect(() => {
-    import('/src/renderer.tsx').then((mod) => {
-      setGameRenderer(() => mod.default || mod.Renderer);
-    }).catch(console.error);
-  }, []);
+    if (__DEV_KIT_MODE__ === 'play') {
+      if (!activeGameId) return;
+      import(/* @vite-ignore */ `virtual:active-game?id=${activeGameId}&t=${Date.now()}`)
+        .then((mod) => {
+          setGameRenderer(() => mod.Renderer || mod.default);
+        })
+        .catch(console.error);
+    } else {
+      import('/src/renderer.tsx').then((mod) => {
+        setGameRenderer(() => mod.default || mod.Renderer);
+      }).catch(console.error);
+    }
+  }, [activeGameId]);
 
   // Auto-join: connect immediately with server-assigned name
   // assignedNicknameRef persists across HMR (React Refresh keeps refs) but resets per new tab
@@ -102,6 +127,16 @@ export default function Play() {
     setSocket(sock);
   }, [nickname]);
 
+  const handleGameActivated = useCallback(async () => {
+    setGameRenderer(null);
+    setGameState(null);
+    try {
+      const res = await fetch(`http://${window.location.hostname}:${window.location.port}/api/games`);
+      const data = await res.json();
+      if (data.activeGameId) setActiveGameId(data.activeGameId);
+    } catch { /* ignore */ }
+  }, []);
+
   const me = room.players.find((p: any) => myPlayerId && p.id === myPlayerId)
            || room.players.find((p: any) => p.nickname === nickname);
   const isHost = me?.isHost;
@@ -135,7 +170,10 @@ export default function Play() {
         if (event === 'stateUpdate') socket.off('game:state', handler as any);
       },
       reportResult: () => {},
-      getAssetUrl: (assetPath: string) => `/assets/${assetPath}`,
+      getAssetUrl: (assetPath: string) =>
+        __DEV_KIT_MODE__ === 'play'
+          ? `/api/games/active/assets/${assetPath}`
+          : `/assets/${assetPath}`,
       getDeviceCapabilities: () => ({ haptics: false, motion: false }),
       haptic: () => {},
       onShake: () => () => {},
@@ -145,25 +183,28 @@ export default function Play() {
 
   if (!joined && !isAutoMode) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
-        <div style={{ ...card, width: 320 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>Join Game</h2>
-          <input
-            type="text"
-            placeholder="Your nickname"
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && join()}
-            className="dk-input"
-            style={inputStyle}
-          />
-          <button
-            onClick={join}
-            className="dk-btn-amber"
-            style={btnAmber}
-          >
-            Join
-          </button>
+      <div>
+        {__DEV_KIT_MODE__ === 'play' && <GameSelector />}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+          <div style={{ ...card, width: 320 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>Join Game</h2>
+            <input
+              type="text"
+              placeholder="Your nickname"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && join()}
+              className="dk-input"
+              style={inputStyle}
+            />
+            <button
+              onClick={join}
+              className="dk-btn-amber"
+              style={btnAmber}
+            >
+              Join
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -171,48 +212,51 @@ export default function Play() {
 
   if (room.phase === 'lobby' || room.phase === 'ready') {
     return (
-      <div style={{ maxWidth: 448, margin: '32px auto 0' }}>
-        <div style={card}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>Lobby</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
-            {room.players.map((p: any) => (
-              <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#27272a', borderRadius: 4, padding: '8px 12px' }}>
-                <span>{p.nickname} {p.isHost && '(Host)'}</span>
-                <span style={{ color: p.ready ? '#4ade80' : '#71717a' }}>
-                  {p.ready ? 'Ready' : 'Not Ready'}
-                </span>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => socket?.emit('player:ready', !isReady)}
-              className={isReady ? 'dk-btn-zinc' : 'dk-btn-green'}
-              style={{
-                flex: 1,
-                padding: '8px 0',
-                borderRadius: 4,
-                fontWeight: 600,
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 14,
-                ...(isReady
-                  ? { background: '#3f3f46', color: '#d4d4d8' }
-                  : { background: '#16a34a', color: '#fff' }),
-              }}
-            >
-              {isReady ? 'Cancel Ready' : 'Ready'}
-            </button>
-            {isHost && (
+      <div>
+        {__DEV_KIT_MODE__ === 'play' && <GameSelector onGameActivated={handleGameActivated} />}
+        <div style={{ maxWidth: 448, margin: '32px auto 0' }}>
+          <div style={card}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>Lobby</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+              {room.players.map((p: any) => (
+                <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#27272a', borderRadius: 4, padding: '8px 12px' }}>
+                  <span>{p.nickname} {p.isHost && '(Host)'}</span>
+                  <span style={{ color: p.ready ? '#4ade80' : '#71717a' }}>
+                    {p.ready ? 'Ready' : 'Not Ready'}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
               <button
-                onClick={() => socket?.emit('game:start')}
-                disabled={!room.players.every((p: any) => p.ready) || room.players.length < 2}
-                className="dk-btn-amber"
-                style={{ ...btnAmber, flex: 1, width: 'auto' }}
+                onClick={() => socket?.emit('player:ready', !isReady)}
+                className={isReady ? 'dk-btn-zinc' : 'dk-btn-green'}
+                style={{
+                  flex: 1,
+                  padding: '8px 0',
+                  borderRadius: 4,
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  ...(isReady
+                    ? { background: '#3f3f46', color: '#d4d4d8' }
+                    : { background: '#16a34a', color: '#fff' }),
+                }}
               >
-                Start Game
+                {isReady ? 'Cancel Ready' : 'Ready'}
               </button>
-            )}
+              {isHost && (
+                <button
+                  onClick={() => socket?.emit('game:start')}
+                  disabled={!room.players.every((p: any) => p.ready) || room.players.length < 2}
+                  className="dk-btn-amber"
+                  style={{ ...btnAmber, flex: 1, width: 'auto' }}
+                >
+                  Start Game
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -221,36 +265,39 @@ export default function Play() {
 
   // Playing or ended
   return (
-    <div style={{ height: 'calc(100vh - 80px)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
-      <PhoneFrame>
-        {gameOver ? (
-          <PlatformTakeover
-            result={gameResult}
-            players={room.players.map((p: any) => ({ id: p.id, nickname: p.nickname }))}
-            onReturn={handleReturn}
-          />
-        ) : GameRenderer && platform && gameState ? (
-          <GameRenderer platform={platform} state={gameState} />
-        ) : (
-          <div style={{ padding: 16, color: '#71717a' }}>Loading game...</div>
+    <div>
+      {__DEV_KIT_MODE__ === 'play' && <GameSelector onGameActivated={handleGameActivated} />}
+      <div style={{ height: __DEV_KIT_MODE__ === 'play' ? 'calc(100vh - 140px)' : 'calc(100vh - 80px)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
+        <PhoneFrame>
+          {gameOver ? (
+            <PlatformTakeover
+              result={gameResult}
+              players={room.players.map((p: any) => ({ id: p.id, nickname: p.nickname }))}
+              onReturn={handleReturn}
+            />
+          ) : GameRenderer && platform && gameState ? (
+            <GameRenderer platform={platform} state={gameState} />
+          ) : (
+            <div style={{ padding: 16, color: '#71717a' }}>Loading game...</div>
+          )}
+        </PhoneFrame>
+        {isHost && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 160 }}>
+            <button
+              onClick={() => socket?.emit('game:forceReset')}
+              style={{ width: '100%', background: '#d97706', color: '#fff', border: 'none', padding: '8px 0', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
+            >
+              Reset Game
+            </button>
+            <button
+              onClick={() => socket?.emit('room:kickAll')}
+              style={{ width: '100%', background: '#dc2626', color: '#fff', border: 'none', padding: '8px 0', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
+            >
+              Kick All Players
+            </button>
+          </div>
         )}
-      </PhoneFrame>
-      {isHost && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 160 }}>
-          <button
-            onClick={() => socket?.emit('game:forceReset')}
-            style={{ width: '100%', background: '#d97706', color: '#fff', border: 'none', padding: '8px 0', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
-          >
-            Reset Game
-          </button>
-          <button
-            onClick={() => socket?.emit('room:kickAll')}
-            style={{ width: '100%', background: '#dc2626', color: '#fff', border: 'none', padding: '8px 0', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
-          >
-            Kick All Players
-          </button>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
