@@ -21,39 +21,59 @@ const gameOuterStyle: React.CSSProperties = {
 };
 
 /**
- * Track actual visible height via VisualViewport API.
- *
- * On iOS Safari (non-PWA), 100dvh does NOT shrink when the keyboard opens.
- * We use visualViewport.height to detect the keyboard and override the
- * container height only while it's open. When the keyboard closes, we
- * revert to 100dvh so Safari toolbar/address bar changes don't leave
- * a dead zone at the bottom.
+ * Diagnostic: track viewport values for debugging keyboard/layout issues.
+ * Shows a small overlay on screen with real-time values.
+ * TODO: Remove after debugging is complete.
  */
-function useViewportHeight(): string {
+interface ViewportDebug {
+  height: string;
+  debug: {
+    vvHeight: number;
+    vvOffsetTop: number;
+    innerHeight: number;
+    documentHeight: number;
+    scrollY: number;
+    rootHeight: number;
+  };
+}
+
+function useViewportHeight(): ViewportDebug {
   const [height, setHeight] = useState('100dvh');
+  const [debug, setDebug] = useState({
+    vvHeight: 0, vvOffsetTop: 0, innerHeight: 0,
+    documentHeight: 0, scrollY: 0, rootHeight: 0,
+  });
   const initialHeight = useRef(0);
 
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
 
-    // Capture the full viewport height on first load (no keyboard)
     initialHeight.current = vv.height;
 
-    const KEYBOARD_THRESHOLD = 100; // px — if viewport shrinks by more than this, keyboard is open
+    const KEYBOARD_THRESHOLD = 100;
 
     const update = () => {
+      const root = document.getElementById('root');
+      setDebug({
+        vvHeight: Math.round(vv.height),
+        vvOffsetTop: Math.round(vv.offsetTop),
+        innerHeight: window.innerHeight,
+        documentHeight: document.documentElement.clientHeight,
+        scrollY: Math.round(window.scrollY),
+        rootHeight: root ? root.clientHeight : 0,
+      });
+
       window.scrollTo(0, 0);
       const shrunk = initialHeight.current - vv.height;
       if (shrunk > KEYBOARD_THRESHOLD) {
-        // Keyboard is open: use exact pixel height so content compresses
         setHeight(`${vv.height}px`);
       } else {
-        // Keyboard is closed: use 100dvh to fill the screen fully
         setHeight('100dvh');
       }
     };
 
+    update();
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);
     return () => {
@@ -62,11 +82,18 @@ function useViewportHeight(): string {
     };
   }, []);
 
-  return height;
+  return { height, debug };
 }
 
+const debugOverlayStyle: React.CSSProperties = {
+  position: 'fixed', bottom: 0, left: 0, right: 0,
+  background: 'rgba(0,0,0,0.85)', color: '#0f0',
+  fontSize: 10, fontFamily: 'monospace', padding: 4,
+  zIndex: 99999, pointerEvents: 'none', lineHeight: 1.4,
+};
+
 export default function Mobile() {
-  const viewportHeight = useViewportHeight();
+  const { height: viewportHeight, debug } = useViewportHeight();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [nickname, setNickname] = useState('');
   const [joined, setJoined] = useState(false);
@@ -218,10 +245,7 @@ export default function Mobile() {
     );
   }
 
-  // Game — mirrors platform container structure:
-  //   div.h-[100dvh].flex.flex-col.overflow-hidden  (root)
-  //     div.flex-1.min-h-0.overflow-y-auto           (game outer)
-  //       div.game-sandbox                            (safe area padding)
+  // Game — mirrors platform container structure
   return (
     <div style={{ ...baseStyle, height: viewportHeight }}>
       <div style={gameOuterStyle}>
@@ -238,6 +262,10 @@ export default function Mobile() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#71717a' }}>Loading game...</div>
           )}
         </div>
+      </div>
+      {/* DEBUG: viewport diagnostic overlay — remove after fixing */}
+      <div style={debugOverlayStyle}>
+        container: {viewportHeight} | vv: {debug.vvHeight} | vvOff: {debug.vvOffsetTop} | inner: {debug.innerHeight} | doc: {debug.documentHeight} | scrollY: {debug.scrollY} | root: {debug.rootHeight}
       </div>
     </div>
   );
