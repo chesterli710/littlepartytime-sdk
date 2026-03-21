@@ -5,16 +5,29 @@ import PlatformTakeover from '../components/PlatformTakeover';
 declare const __SOCKET_PORT__: number;
 declare const __DEV_KIT_MODE__: string;
 
-const fullScreen: React.CSSProperties = {
-  width: '100vw',
+/**
+ * Root container mirrors the platform's room page:
+ *   <div class="h-[100dvh] flex flex-col overflow-hidden">
+ * No position:fixed — uses 100dvh which shrinks with mobile keyboard.
+ */
+const rootStyle: React.CSSProperties = {
   height: '100dvh',
+  display: 'flex',
+  flexDirection: 'column',
   overflow: 'hidden',
-  position: 'fixed',
-  top: 0,
-  left: 0,
   background: '#0a0a0a',
   color: '#e5e5e5',
   fontFamily: 'system-ui, -apple-system, sans-serif',
+};
+
+/**
+ * Game outer wrapper mirrors the platform's flex-1 scrollable area:
+ *   <div class="flex-1 min-h-0 overflow-y-auto">
+ */
+const gameOuterStyle: React.CSSProperties = {
+  flex: 1,
+  minHeight: 0,
+  overflowY: 'auto',
 };
 
 export default function Mobile() {
@@ -108,7 +121,7 @@ export default function Mobile() {
   // Join screen
   if (!joined) {
     return (
-      <div style={{ ...fullScreen, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ ...rootStyle, alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ width: '85%', maxWidth: 320 }}>
           <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16, textAlign: 'center' }}>Join Game</h2>
           <input
@@ -133,7 +146,7 @@ export default function Mobile() {
   // Lobby
   if (room.phase === 'lobby' || room.phase === 'ready') {
     return (
-      <div style={{ ...fullScreen, padding: 16, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ ...rootStyle, padding: 16 }}>
         <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>Lobby</h2>
         <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
           {room.players.map((p: any) => (
@@ -169,20 +182,27 @@ export default function Mobile() {
     );
   }
 
-  // Game — renderer fills viewport directly
+  // Game — mirrors platform container structure:
+  //   div.h-[100dvh].flex.flex-col.overflow-hidden  (root)
+  //     div.flex-1.min-h-0.overflow-y-auto           (game outer)
+  //       div.game-sandbox                            (safe area padding)
   return (
-    <div style={fullScreen}>
-      {gameOver ? (
-        <PlatformTakeover
-          result={gameResult}
-          players={room.players.map((p: any) => ({ id: p.id, nickname: p.nickname }))}
-          onReturn={handleReturn}
-        />
-      ) : GameRenderer && platform && gameState ? (
-        <GameRenderer platform={platform} state={gameState} />
-      ) : (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#71717a' }}>Loading game...</div>
-      )}
+    <div style={rootStyle}>
+      <div style={gameOuterStyle}>
+        <div className="game-sandbox">
+          {gameOver ? (
+            <PlatformTakeover
+              result={gameResult}
+              players={room.players.map((p: any) => ({ id: p.id, nickname: p.nickname }))}
+              onReturn={handleReturn}
+            />
+          ) : GameRenderer && platform && gameState ? (
+            <GameRenderer platform={platform} state={gameState} />
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#71717a' }}>Loading game...</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
