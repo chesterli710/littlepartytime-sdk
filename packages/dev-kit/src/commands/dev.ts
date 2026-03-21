@@ -187,6 +187,7 @@ export async function devCommand(projectDir: string, options: DevOptions = {}): 
     if (lanIp) {
       console.log('');
       console.log(`  LAN:          http://${lanIp}:${port}`);
+      console.log(`  Mobile:       http://${lanIp}:${port}/m`);
     }
     console.log('');
     console.log('  Press Ctrl+C to stop');

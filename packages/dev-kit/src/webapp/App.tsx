@@ -4,13 +4,15 @@ import Preview from './pages/Preview';
 declare const __SOCKET_PORT__: number;
 import Play from './pages/Play';
 import Debug from './pages/Debug';
+import Mobile from './pages/Mobile';
 import { captureScreen } from './utils/captureScreen';
 
-type Page = 'preview' | 'play' | 'debug';
+type Page = 'preview' | 'play' | 'debug' | 'mobile';
 
 export default function App() {
   const [page, setPage] = useState<Page>(() => {
     const path = window.location.pathname;
+    if (path === '/m' || path === '/m/') return 'mobile';
     if (path.includes('play')) return 'play';
     if (path.includes('debug')) return 'debug';
     return 'preview';
@@ -22,6 +24,9 @@ export default function App() {
     (window as any).__devkit__ = { captureScreen };
     return () => { delete (window as any).__devkit__; };
   }, []);
+
+  // Mobile route: no nav, no wrapper
+  if (page === 'mobile') return <Mobile />;
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>

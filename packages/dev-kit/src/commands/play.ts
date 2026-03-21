@@ -141,6 +141,7 @@ export async function playCommand(options: PlayOptions = {}): Promise<void> {
   if (lanIp) {
     console.log('');
     console.log(`  LAN:          http://${lanIp}:${port}`);
+    console.log(`  Mobile:       http://${lanIp}:${port}/m`);
   }
   console.log('');
   console.log(`  Games loaded: ${zipManager.listGames().length}`);
