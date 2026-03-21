@@ -79,10 +79,15 @@ export async function playCommand(options: PlayOptions = {}): Promise<void> {
     return {
       name: 'serve-active-game',
       resolveId(id) {
-        // Strip query params for resolution, keep for cache busting
         if (id.startsWith('virtual:active-game')) return id;
+        // Intercept dev-mode imports so Vite doesn't error in play mode
+        if (id === '/src/renderer.tsx' || id === '/src/index.ts') return id;
       },
       load(id) {
+        // Return empty modules for dev-mode imports (never reached at runtime)
+        if (id === '/src/renderer.tsx' || id === '/src/index.ts') {
+          return 'export default null; export const Renderer = null; export const engine = null; export const config = null;';
+        }
         if (!id.startsWith('virtual:active-game')) return;
         const match = id.match(/\?id=([^&]+)/);
         const gameId = match?.[1];
