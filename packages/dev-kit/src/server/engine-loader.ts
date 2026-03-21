@@ -51,3 +51,30 @@ export function clearEngineCache(): void {
   cachedEngine = null;
   cachedEnginePath = null;
 }
+
+/**
+ * Load engine from an arbitrary absolute path (for play mode).
+ * Does NOT use the shared cache — each call loads fresh.
+ */
+export function loadEngineFromPath(enginePath: string): GameEngine {
+  if (!fs.existsSync(enginePath)) {
+    throw new Error(`Engine not found at ${enginePath}`);
+  }
+
+  const resolved = require.resolve(enginePath);
+  if (require.cache[resolved]) {
+    delete require.cache[resolved];
+  }
+
+  const module = require(enginePath);
+  const engine: GameEngine = module.engine || module.default?.engine || module;
+
+  const required = ['init', 'handleAction', 'isGameOver', 'getResult', 'getPlayerView'];
+  for (const method of required) {
+    if (typeof (engine as any)[method] !== 'function') {
+      throw new Error(`Engine missing required method: ${method}`);
+    }
+  }
+
+  return engine;
+}
