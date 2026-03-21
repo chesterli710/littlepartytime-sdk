@@ -44,7 +44,7 @@ export default function Play() {
   useEffect(() => {
     if (__DEV_KIT_MODE__ === 'play') {
       if (!activeGameId) return;
-      import(/* @vite-ignore */ `virtual:active-game?id=${activeGameId}&t=${Date.now()}`)
+      import(/* @vite-ignore */ `/__active-game?id=${activeGameId}&t=${Date.now()}`)
         .then((mod) => {
           setGameRenderer(() => mod.Renderer || mod.default);
         })
