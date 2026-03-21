@@ -22,6 +22,14 @@ export default function Play() {
   const [gameResult, setGameResult] = useState<any>(null);
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
 
+  // Mobile detection: phones get a fullscreen game-only UI
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   const isAutoMode = useMemo(() => new URLSearchParams(window.location.search).get('auto') === 'true', []);
   const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
   // Ref survives React Fast Refresh (HMR) but not new tabs — perfect for reconnect identity
@@ -184,8 +192,8 @@ export default function Play() {
   if (!joined && !isAutoMode) {
     return (
       <div>
-        {__DEV_KIT_MODE__ === 'play' && <GameSelector />}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+        {!isMobile && __DEV_KIT_MODE__ === 'play' && <GameSelector />}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: isMobile ? '100vh' : '60vh' }}>
           <div style={{ ...card, width: 320 }}>
             <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>Join Game</h2>
             <input
@@ -213,8 +221,8 @@ export default function Play() {
   if (room.phase === 'lobby' || room.phase === 'ready') {
     return (
       <div>
-        {__DEV_KIT_MODE__ === 'play' && <GameSelector onGameActivated={handleGameActivated} />}
-        <div style={{ maxWidth: 448, margin: '32px auto 0' }}>
+        {!isMobile && __DEV_KIT_MODE__ === 'play' && <GameSelector onGameActivated={handleGameActivated} />}
+        <div style={{ maxWidth: 448, margin: isMobile ? '16px auto 0' : '32px auto 0' }}>
           <div style={card}>
             <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>Lobby</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
@@ -263,23 +271,35 @@ export default function Play() {
     );
   }
 
-  // Playing or ended
+  // Playing or ended — game content
+  const gameContent = gameOver ? (
+    <PlatformTakeover
+      result={gameResult}
+      players={room.players.map((p: any) => ({ id: p.id, nickname: p.nickname }))}
+      onReturn={handleReturn}
+    />
+  ) : GameRenderer && platform && gameState ? (
+    <GameRenderer platform={platform} state={gameState} />
+  ) : (
+    <div style={{ padding: 16, color: '#71717a' }}>Loading game...</div>
+  );
+
+  // Mobile: fullscreen game, no PhoneFrame or dev controls
+  if (isMobile) {
+    return (
+      <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+        {gameContent}
+      </div>
+    );
+  }
+
+  // Desktop: PhoneFrame + dev controls
   return (
     <div>
       {__DEV_KIT_MODE__ === 'play' && <GameSelector onGameActivated={handleGameActivated} />}
       <div style={{ height: __DEV_KIT_MODE__ === 'play' ? 'calc(100vh - 140px)' : 'calc(100vh - 80px)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
         <PhoneFrame>
-          {gameOver ? (
-            <PlatformTakeover
-              result={gameResult}
-              players={room.players.map((p: any) => ({ id: p.id, nickname: p.nickname }))}
-              onReturn={handleReturn}
-            />
-          ) : GameRenderer && platform && gameState ? (
-            <GameRenderer platform={platform} state={gameState} />
-          ) : (
-            <div style={{ padding: 16, color: '#71717a' }}>Loading game...</div>
-          )}
+          {gameContent}
         </PhoneFrame>
         {isHost && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 160 }}>
