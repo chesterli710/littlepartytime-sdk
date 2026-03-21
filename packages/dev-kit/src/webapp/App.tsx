@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Preview from './pages/Preview';
+
+declare const __SOCKET_PORT__: number;
 import Play from './pages/Play';
 import Debug from './pages/Debug';
 import { captureScreen } from './utils/captureScreen';
@@ -57,7 +59,7 @@ export default function App() {
         ))}
         <div style={{ flex: 1 }} />
         <button
-          onClick={() => fetch('http://localhost:4001/api/reset', { method: 'POST' })}
+          onClick={() => fetch(`http://${window.location.hostname}:${__SOCKET_PORT__}/api/reset`, { method: 'POST' })}
           className="dk-nav-btn"
           style={{
             padding: '4px 12px',

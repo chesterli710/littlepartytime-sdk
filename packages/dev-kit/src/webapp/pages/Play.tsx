@@ -3,6 +3,8 @@ import { io, Socket } from 'socket.io-client';
 import PhoneFrame from '../components/PhoneFrame';
 import PlatformTakeover from '../components/PlatformTakeover';
 
+declare const __SOCKET_PORT__: number;
+
 const card: React.CSSProperties = { background: '#18181b', borderRadius: 8, padding: 24 };
 const inputStyle: React.CSSProperties = { width: '100%', background: '#27272a', border: '1px solid #3f3f46', borderRadius: 4, padding: '8px 12px', marginBottom: 16, color: '#e5e5e5', fontSize: 14 };
 const btnAmber: React.CSSProperties = { width: '100%', background: '#d97706', color: '#fff', border: 'none', padding: '8px 0', borderRadius: 4, fontWeight: 600, cursor: 'pointer', fontSize: 14 };
@@ -38,7 +40,7 @@ export default function Play() {
       ? { nickname: assignedNicknameRef.current }
       : { auto: 'true' };
 
-    const sock = io('http://localhost:4001', { query });
+    const sock = io(`http://${window.location.hostname}:${__SOCKET_PORT__}`, { query });
 
     sock.on('connect', () => {
       setMyId(sock.id);
@@ -72,7 +74,7 @@ export default function Play() {
   const join = useCallback(() => {
     if (!nickname.trim()) return;
 
-    const sock = io('http://localhost:4001', { query: { nickname } });
+    const sock = io(`http://${window.location.hostname}:${__SOCKET_PORT__}`, { query: { nickname } });
 
     sock.on('connect', () => {
       setMyId(sock.id);

@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { createServer, build, ViteDevServer, Plugin } from 'vite';
 import { createSocketServer } from '../server/socket-server';
+import { getLanAddress } from '../server/lan-address';
 import chokidar from 'chokidar';
 
 const MIME_TYPES: Record<string, string> = {
@@ -158,9 +159,14 @@ export async function devCommand(projectDir: string, options: DevOptions = {}): 
     plugins: [react(), serveGameAssets(projectDir)],
     server: {
       port,
+      host: '0.0.0.0',
       fs: {
         allow: [webappDir, projectDir],
       },
+    },
+    define: {
+      __SOCKET_PORT__: JSON.stringify(socketPort),
+      __DEV_KIT_MODE__: JSON.stringify('dev'),
     },
     resolve: {
       alias: {
@@ -173,10 +179,15 @@ export async function devCommand(projectDir: string, options: DevOptions = {}): 
   await vite.listen();
 
   if (!options.silent) {
+    const lanIp = getLanAddress();
     console.log(`  Preview:      http://localhost:${port}/preview`);
     console.log(`  Multiplayer:  http://localhost:${port}/play`);
     console.log(`  Debug Panel:  http://localhost:${port}/debug`);
     console.log(`  Socket.IO:    ws://localhost:${socketPort}`);
+    if (lanIp) {
+      console.log('');
+      console.log(`  LAN:          http://${lanIp}:${port}`);
+    }
     console.log('');
     console.log('  Press Ctrl+C to stop');
     console.log('');

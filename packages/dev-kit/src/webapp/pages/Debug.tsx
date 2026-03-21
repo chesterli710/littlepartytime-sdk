@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
 
+declare const __SOCKET_PORT__: number;
+
 export default function Debug() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [room, setRoom] = useState<any>({ players: [], phase: 'lobby' });
   const [fullState, setFullState] = useState<any>(null);
 
   useEffect(() => {
-    const sock = io('http://localhost:4001', { query: { nickname: '__debug__' } });
+    const sock = io(`http://${window.location.hostname}:${__SOCKET_PORT__}`, { query: { nickname: '__debug__' } });
 
     sock.on('room:update', setRoom);
     sock.on('game:state', setFullState);
