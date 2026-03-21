@@ -84,9 +84,6 @@ export async function playCommand(options: PlayOptions = {}): Promise<void> {
       },
       load(id) {
         if (!id.startsWith('virtual:active-game')) return;
-        const games = zipManager.listGames();
-        // Find the active game (determined by games-api activeGameId)
-        // The activeGameId is communicated via query param in the import URL
         const match = id.match(/\?id=([^&]+)/);
         const gameId = match?.[1];
         const entry = gameId ? zipManager.getGame(gameId) : undefined;

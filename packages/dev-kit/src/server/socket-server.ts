@@ -138,10 +138,11 @@ export function createSocketServer(options: SocketServerOptions): {
       log(`Game started!`);
 
       // Send initial state to each player
+      if (!engine) return;
       room.players.forEach(p => {
         const playerSocket = io.sockets.sockets.get(p.socketId);
         if (playerSocket) {
-          const view = engine.getPlayerView(room.state, p.id);
+          const view = engine!.getPlayerView(room.state, p.id);
           playerSocket.emit('game:state', view);
         }
       });
@@ -165,7 +166,7 @@ export function createSocketServer(options: SocketServerOptions): {
       room.players.forEach(p => {
         const playerSocket = io.sockets.sockets.get(p.socketId);
         if (playerSocket) {
-          const view = engine.getPlayerView(room.state, p.id);
+          const view = engine!.getPlayerView(room.state, p.id);
           playerSocket.emit('game:state', view);
         }
       });
