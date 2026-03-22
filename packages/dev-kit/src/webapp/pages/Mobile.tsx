@@ -22,27 +22,37 @@ const gameOuterStyle: React.CSSProperties = {
 
 /**
  * Track viewport height for mobile keyboard handling.
- * In regular Safari (non-PWA), 100dvh doesn't shrink with keyboard.
- * Uses VisualViewport to detect keyboard and switch to pixel height.
+ *
+ * ALWAYS uses pixel values (never 100dvh) to avoid the CSS unit
+ * toggle (px ↔ dvh) that corrupts game renderers' height chain
+ * on subsequent phase transitions in iOS Safari.
+ *
+ * - No keyboard: window.innerHeight (full layout viewport)
+ * - Keyboard open: visualViewport.height (actual visible area)
+ * - Keyboard close: window.innerHeight again (same value, same unit)
  */
 function useViewportHeight(): string {
-  const [height, setHeight] = useState('100dvh');
-  const initialHeight = useRef(0);
+  const [height, setHeight] = useState(() => `${window.innerHeight}px`);
 
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    initialHeight.current = vv.height;
+
+    const fullHeight = window.innerHeight;
     const KEYBOARD_THRESHOLD = 100;
+
     const update = () => {
       window.scrollTo(0, 0);
-      const shrunk = initialHeight.current - vv.height;
+      const shrunk = fullHeight - vv.height;
       if (shrunk > KEYBOARD_THRESHOLD) {
+        // Keyboard open: compress to visual viewport
         setHeight(`${vv.height}px`);
       } else {
-        setHeight('100dvh');
+        // Keyboard closed: use full layout viewport height
+        setHeight(`${window.innerHeight}px`);
       }
     };
+
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);
     return () => {
